@@ -26,24 +26,32 @@ func (c *ConntrackCheck) Run(ctx context.Context, target string) (*types.TestRes
 	details := types.ConntrackDetails{}
 	var issues []string
 
+	// Check if conntrack is available by looking for the count file
 	entries, err := c.readSysctl("/proc/sys/net/netfilter/nf_conntrack_count")
-	if err != nil {
+	if os.IsNotExist(err) {
+		// Conntrack module not loaded
+		result.Status = types.StatusFail
+		result.Error = "conntrack module not loaded"
+		details.Issues = []string{"conntrack module not loaded"}
+		result.Details = map[string]interface{}{"conntrack": details}
+		return result, nil
+	} else if err != nil {
 		issues = append(issues, fmt.Sprintf("failed to read conntrack count: %v", err))
 	} else {
 		details.Entries, _ = strconv.Atoi(entries)
 	}
 
 	maxEntries, err := c.readSysctl("/proc/sys/net/netfilter/nf_conntrack_max")
-	if err != nil {
+	if err != nil && !os.IsNotExist(err) {
 		issues = append(issues, fmt.Sprintf("failed to read conntrack max: %v", err))
-	} else {
+	} else if err == nil {
 		details.MaxEntries, _ = strconv.Atoi(maxEntries)
 	}
 
 	stats, err := c.readConntrackStats()
-	if err != nil {
+	if err != nil && !os.IsNotExist(err) {
 		issues = append(issues, fmt.Sprintf("failed to read conntrack stats: %v", err))
-	} else {
+	} else if err == nil {
 		details.InsertsFailed = stats["insert_failed"]
 		details.DropCount = stats["drop"]
 

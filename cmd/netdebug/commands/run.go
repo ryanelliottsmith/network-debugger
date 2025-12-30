@@ -23,7 +23,7 @@ Tests connectivity, DNS, ports, and optionally bandwidth between nodes.`,
 }
 
 func init() {
-	runCmd.Flags().StringSlice("checks", []string{"dns", "ping", "ports", "hostconfig", "conntrack", "iptables"}, "Checks to run (dns,ping,ports,bandwidth,hostconfig,conntrack,iptables)")
+	runCmd.Flags().StringSlice("checks", []string{"dns", "ping", "hostconfig", "conntrack", "iptables"}, "Checks to run (dns,ping,ports,bandwidth,hostconfig,conntrack,iptables)")
 	runCmd.Flags().Bool("host-network", true, "Test host network path")
 	runCmd.Flags().Bool("overlay", true, "Test overlay network path")
 	runCmd.Flags().Bool("no-host-network", false, "Disable host network testing")

@@ -41,6 +41,7 @@ func (c *HostConfigCheck) Run(ctx context.Context, target string) (*types.TestRe
 		details.IPForwarding = true
 	}
 
+	// TODO: Compare MTU between nodes
 	mtu, err := c.getMTU(ctx)
 	if err != nil {
 		issues = append(issues, fmt.Sprintf("failed to get MTU: %v", err))
