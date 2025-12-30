@@ -33,8 +33,6 @@ go.work.sum
 
 # Build artifacts
 bin/
-netdebug
-/netdebug
 
 # Distribution
 dist/
