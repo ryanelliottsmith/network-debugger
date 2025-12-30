@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"net"
+	"strings"
 	"time"
 
 	"github.com/ryanelliottsmith/network-debugger/pkg/types"
@@ -49,7 +50,7 @@ func (c *DNSCheck) Run(ctx context.Context, target string) (*types.TestResult, e
 	result.Details["lookups"] = allDetails
 
 	if len(errors) > 0 {
-		result.Error = fmt.Sprintf("%d/%d lookups failed", len(errors), len(names))
+		result.Error = strings.Join(errors, "; ")
 		result.Details["errors"] = errors
 	}
 

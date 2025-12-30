@@ -58,10 +58,14 @@ func (c *Coordinator) RunTests(ctx context.Context, config *types.Config, podNam
 	watcher := NewLogWatcher(c.clientset, c.namespace)
 	defer watcher.Close()
 
+	// Create cancellable context for log watchers
+	watchCtx, watchCancel := context.WithCancel(ctx)
+	defer watchCancel()
+
 	agg := NewAggregator(podNames)
 
 	for _, podName := range podNames {
-		watcher.WatchPod(ctx, podName)
+		watcher.WatchPod(watchCtx, podName)
 	}
 
 	testCtx := ctx

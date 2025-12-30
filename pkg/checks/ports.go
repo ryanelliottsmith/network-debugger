@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"net"
+	"strings"
 	"time"
 
 	"github.com/ryanelliottsmith/network-debugger/pkg/types"
@@ -48,7 +49,7 @@ func (c *PortsCheck) Run(ctx context.Context, target string) (*types.TestResult,
 
 	if len(failedPorts) > 0 {
 		result.Status = types.StatusFail
-		result.Error = fmt.Sprintf("%d/%d ports unreachable", len(failedPorts), len(ports))
+		result.Error = strings.Join(failedPorts, ", ")
 		result.Details["failed_ports"] = failedPorts
 	}
 

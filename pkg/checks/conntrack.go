@@ -65,7 +65,7 @@ func (c *ConntrackCheck) Run(ctx context.Context, target string) (*types.TestRes
 
 	if len(issues) > 0 {
 		result.Status = types.StatusFail
-		result.Error = fmt.Sprintf("%d conntrack issues found", len(issues))
+		result.Error = strings.Join(issues, "; ")
 		details.Issues = issues
 	}
 

@@ -117,30 +117,137 @@ func FormatEvents(events []*types.Event, format string) error {
 	}
 }
 
+// isLocalCheck returns true for checks that run locally and don't have a meaningful target
+func isLocalCheck(check string) bool {
+	switch check {
+	case "conntrack", "hostconfig", "iptables":
+		return true
+	default:
+		return false
+	}
+}
+
 func printEventsTable(events []*types.Event) error {
 	if len(events) == 0 {
 		fmt.Println("No test results collected.")
 		return nil
 	}
 
-	// Count results by status
+	// Group events by check type
+	checkOrder := []string{"ping", "dns", "ports", "bandwidth", "hostconfig", "conntrack", "iptables"}
+	eventsByCheck := make(map[string][]*types.Event)
+
 	passed := 0
 	failed := 0
 	errors := 0
 
-	// Print test results
-	fmt.Println("Test Results:")
-	fmt.Println(fmt.Sprintf("%-15s %-30s %-15s %-10s %s", "Node", "Check", "Target", "Status", "Details"))
-	fmt.Println(fmt.Sprintf("%-15s %-30s %-15s %-10s %s", strings.Repeat("-", 15), strings.Repeat("-", 30), strings.Repeat("-", 15), strings.Repeat("-", 10), strings.Repeat("-", 20)))
-
 	for _, event := range events {
 		if event.Type == types.EventTypeTestResult {
-			status := "✓ PASS"
+			eventsByCheck[event.Check] = append(eventsByCheck[event.Check], event)
 			if event.Status == "fail" {
-				status = "✗ FAIL"
 				failed++
 			} else {
 				passed++
+			}
+		} else if event.Type == types.EventTypeError {
+			errors++
+		}
+	}
+
+	// Print grouped results
+	for _, check := range checkOrder {
+		checkEvents, ok := eventsByCheck[check]
+		if !ok || len(checkEvents) == 0 {
+			continue
+		}
+
+		// Print check header
+		fmt.Printf("\n%s\n", strings.ToUpper(check))
+		fmt.Println(strings.Repeat("-", 60))
+
+		isLocal := isLocalCheck(check)
+
+		if isLocal {
+			// Local checks: Node, Status, Details
+			fmt.Printf("%-20s %-10s %s\n", "Node", "Status", "Details")
+			for _, event := range checkEvents {
+				status := "✓ PASS"
+				if event.Status == "fail" {
+					status = "✗ FAIL"
+				}
+
+				node := event.Node
+				if len(node) > 20 {
+					node = node[:17] + "..."
+				}
+
+				details := ""
+				if event.Error != "" {
+					details = event.Error
+				}
+
+				fmt.Printf("%-20s %-10s %s\n", node, status, details)
+			}
+		} else {
+			// Connectivity checks: Node, Target, Status, Details
+			fmt.Printf("%-20s %-20s %-10s %s\n", "Node", "Target", "Status", "Details")
+			for _, event := range checkEvents {
+				status := "✓ PASS"
+				if event.Status == "fail" {
+					status = "✗ FAIL"
+				}
+
+				node := event.Node
+				if len(node) > 20 {
+					node = node[:17] + "..."
+				}
+
+				target := event.Target
+				if len(target) > 20 {
+					target = target[:17] + "..."
+				}
+
+				details := ""
+				if event.Error != "" {
+					details = event.Error
+				}
+
+				fmt.Printf("%-20s %-20s %-10s %s\n", node, target, status, details)
+			}
+		}
+	}
+
+	// Handle any checks not in our predefined order
+	for check, checkEvents := range eventsByCheck {
+		found := false
+		for _, ordered := range checkOrder {
+			if check == ordered {
+				found = true
+				break
+			}
+		}
+		if found || len(checkEvents) == 0 {
+			continue
+		}
+
+		fmt.Printf("\n%s\n", strings.ToUpper(check))
+		fmt.Println(strings.Repeat("-", 60))
+		fmt.Printf("%-20s %-20s %-10s %s\n", "Node", "Target", "Status", "Details")
+
+		for _, event := range checkEvents {
+			status := "✓ PASS"
+			if event.Status == "fail" {
+				status = "✗ FAIL"
+			}
+
+			node := event.Node
+			if len(node) > 20 {
+				node = node[:17] + "..."
+			}
+
+			target := event.Target
+			if len(target) > 20 {
+				target = target[:17] + "..."
 			}
 
 			details := ""
@@ -148,24 +255,13 @@ func printEventsTable(events []*types.Event) error {
 				details = event.Error
 			}
 
-			node := event.Node
-			if len(node) > 15 {
-				node = node[:12] + "..."
-			}
-
-			target := event.Target
-			if len(target) > 15 {
-				target = target[:12] + "..."
-			}
-
-			fmt.Printf("%-15s %-30s %-15s %-10s %s\n", node, event.Check, target, status, details)
-		} else if event.Type == types.EventTypeError {
-			errors++
+			fmt.Printf("%-20s %-20s %-10s %s\n", node, target, status, details)
 		}
 	}
 
 	// Print summary
 	fmt.Println()
+	fmt.Println(strings.Repeat("=", 60))
 	fmt.Printf("Summary: %d passed, %d failed, %d errors\n", passed, failed, errors)
 
 	return nil

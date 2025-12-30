@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"sync"
 
 	"github.com/ryanelliottsmith/network-debugger/pkg/types"
 	corev1 "k8s.io/api/core/v1"
@@ -17,6 +18,7 @@ type LogWatcher struct {
 	namespace string
 	eventChan chan *types.Event
 	errorChan chan error
+	wg        sync.WaitGroup
 }
 
 func NewLogWatcher(clientset *kubernetes.Clientset, namespace string) *LogWatcher {
@@ -37,10 +39,13 @@ func (lw *LogWatcher) ErrorChan() <-chan error {
 }
 
 func (lw *LogWatcher) WatchPod(ctx context.Context, podName string) {
+	lw.wg.Add(1)
 	go lw.watchPodLogs(ctx, podName)
 }
 
 func (lw *LogWatcher) watchPodLogs(ctx context.Context, podName string) {
+	defer lw.wg.Done()
+
 	podLogOpts := &corev1.PodLogOptions{
 		Follow:     true,
 		Timestamps: false,
@@ -49,7 +54,10 @@ func (lw *LogWatcher) watchPodLogs(ctx context.Context, podName string) {
 	req := lw.clientset.CoreV1().Pods(lw.namespace).GetLogs(podName, podLogOpts)
 	stream, err := req.Stream(ctx)
 	if err != nil {
-		lw.errorChan <- fmt.Errorf("failed to stream logs from pod %s: %w", podName, err)
+		select {
+		case lw.errorChan <- fmt.Errorf("failed to stream logs from pod %s: %w", podName, err):
+		case <-ctx.Done():
+		}
 		return
 	}
 	defer stream.Close()
@@ -71,11 +79,15 @@ func (lw *LogWatcher) watchPodLogs(ctx context.Context, podName string) {
 	}
 
 	if err := scanner.Err(); err != nil && err != io.EOF {
-		lw.errorChan <- fmt.Errorf("error reading logs from pod %s: %w", podName, err)
+		select {
+		case lw.errorChan <- fmt.Errorf("error reading logs from pod %s: %w", podName, err):
+		case <-ctx.Done():
+		}
 	}
 }
 
 func (lw *LogWatcher) Close() {
+	lw.wg.Wait()
 	close(lw.eventChan)
 	close(lw.errorChan)
 }
