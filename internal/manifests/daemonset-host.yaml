@@ -1,0 +1,59 @@
+apiVersion: apps/v1
+kind: DaemonSet
+metadata:
+  name: netdebug-host
+  namespace: netdebug
+  labels:
+    app: netdebug
+    network-mode: host
+spec:
+  selector:
+    matchLabels:
+      app: netdebug
+      network-mode: host
+  template:
+    metadata:
+      labels:
+        app: netdebug
+        network-mode: host
+    spec:
+      hostNetwork: true
+      hostPID: true
+      serviceAccountName: netdebug
+      containers:
+      - name: netdebug
+        image: ghcr.io/ryanelliottsmith/network-debugger:latest
+        command: ["netdebug"]
+        args:
+        - agent
+        - --mode=configmap
+        - --config=netdebug/netdebug-config
+        env:
+        - name: NODE_NAME
+          valueFrom:
+            fieldRef:
+              fieldPath: spec.nodeName
+        - name: POD_NAME
+          valueFrom:
+            fieldRef:
+              fieldPath: metadata.name
+        - name: POD_IP
+          valueFrom:
+            fieldRef:
+              fieldPath: status.podIP
+        - name: HOST_IP
+          valueFrom:
+            fieldRef:
+              fieldPath: status.hostIP
+        securityContext:
+          privileged: true
+          capabilities:
+            add:
+            - NET_ADMIN
+            - NET_RAW
+        resources:
+          limits:
+            memory: 256Mi
+          requests:
+            memory: 128Mi
+            cpu: 100m
