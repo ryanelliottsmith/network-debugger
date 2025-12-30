@@ -207,6 +207,9 @@ func runTests(cmd *cobra.Command, args []string) error {
 }
 
 func runStandardTests(ctx context.Context, coord *coordinator.Coordinator, targets []types.TargetNode, pods []types.TargetNode, checks []string, timeout time.Duration) ([]*types.Event, error) {
+	testCtx, cancel := context.WithCancel(ctx)
+	defer cancel()
+
 	runID := coordinator.GenerateRunID()
 
 	config := &types.Config{
@@ -226,7 +229,7 @@ func runStandardTests(ctx context.Context, coord *coordinator.Coordinator, targe
 
 	fmt.Printf("Starting test run %s with %d pods...\n", runID[:8], len(podNames))
 
-	events, err := coord.RunTests(ctx, config, podNames, timeout)
+	events, err := coord.RunTests(testCtx, config, podNames, timeout)
 	if err != nil {
 		return nil, err
 	}
@@ -243,6 +246,8 @@ func runBandwidthTests(ctx context.Context, coord *coordinator.Coordinator, targ
 	allEvents := []*types.Event{}
 
 	for idx, pair := range pairs {
+		testCtx, cancel := context.WithCancel(ctx)
+
 		source := pair[0]
 		target := pair[1]
 
@@ -267,7 +272,9 @@ func runBandwidthTests(ctx context.Context, coord *coordinator.Coordinator, targ
 
 		podNames := []string{source.PodName}
 
-		events, err := coord.RunTests(ctx, config, podNames, timeout)
+		events, err := coord.RunTests(testCtx, config, podNames, timeout)
+		cancel()
+
 		if err != nil {
 			fmt.Printf("❌ Failed: %v\n", err)
 			continue
