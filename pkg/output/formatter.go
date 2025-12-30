@@ -127,6 +127,40 @@ func isLocalCheck(check string) bool {
 	}
 }
 
+// formatBandwidthDetails extracts bandwidth info from event details for display
+func formatBandwidthDetails(details interface{}) string {
+	if details == nil {
+		return ""
+	}
+
+	// Details can be a map or struct depending on how it was serialized
+	switch d := details.(type) {
+	case map[string]interface{}:
+		// Check for nested "bandwidth" key (as stored in TestResult.Details)
+		if bw, ok := d["bandwidth"]; ok {
+			if bwMap, ok := bw.(map[string]interface{}); ok {
+				return formatBandwidthMap(bwMap)
+			}
+		}
+		// Try direct format
+		return formatBandwidthMap(d)
+	}
+	return ""
+}
+
+func formatBandwidthMap(m map[string]interface{}) string {
+	mbps, ok := m["bandwidth_mbps"].(float64)
+	if !ok {
+		return ""
+	}
+	retransmits, _ := m["retransmits"].(float64) // JSON numbers are float64
+
+	if mbps >= 1000 {
+		return fmt.Sprintf("%.2f Gbps, %d retransmits", mbps/1000, int(retransmits))
+	}
+	return fmt.Sprintf("%.2f Mbps, %d retransmits", mbps, int(retransmits))
+}
+
 func printEventsTable(events []*types.Event) error {
 	if len(events) == 0 {
 		fmt.Println("No test results collected.")
@@ -210,6 +244,8 @@ func printEventsTable(events []*types.Event) error {
 				details := ""
 				if event.Error != "" {
 					details = event.Error
+				} else if check == "bandwidth" {
+					details = formatBandwidthDetails(event.Details)
 				}
 
 				fmt.Printf("%-20s %-20s %-10s %s\n", node, target, status, details)

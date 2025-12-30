@@ -33,7 +33,7 @@ func RunTests(ctx context.Context, config *types.Config, self *SelfInfo) error {
 
 	if config.BandwidthTest != nil && config.BandwidthTest.Active {
 		if config.BandwidthTest.SourceNode == self.NodeName {
-			runBandwidthTest(ctx, config.BandwidthTest, self, config.RunID)
+			runBandwidthTest(ctx, config.BandwidthTest, self, config.RunID, config.Debug)
 		}
 	}
 
@@ -116,7 +116,7 @@ func runSingleCheck(ctx context.Context, checkName, targetIP, targetNode string,
 	}
 }
 
-func runBandwidthTest(ctx context.Context, test *types.BandwidthTest, self *SelfInfo, runID string) {
+func runBandwidthTest(ctx context.Context, test *types.BandwidthTest, self *SelfInfo, runID string, debug bool) {
 	log.Printf("Running bandwidth test to %s (%s)", test.TargetNode, test.TargetIP)
 
 	if err := EmitTestStart(self, "bandwidth", test.TargetNode, runID); err != nil {
@@ -125,10 +125,10 @@ func runBandwidthTest(ctx context.Context, test *types.BandwidthTest, self *Self
 
 	duration := test.Duration
 	if duration == 0 {
-		duration = 10
+		duration = 30
 	}
 
-	check := checks.NewBandwidthCheck(duration)
+	check := checks.NewBandwidthCheck(duration, debug)
 	result := checks.RunWithTimeout(check, test.TargetIP, time.Duration(duration+5)*time.Second)
 	result.Node = self.NodeName
 

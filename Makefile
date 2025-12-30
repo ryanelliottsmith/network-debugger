@@ -44,17 +44,6 @@ clean:
 	rm -rf bin/
 	rm -f coverage.out
 
-.PHONY: docker-buildx-setup
-docker-buildx-setup:
-	@if ! docker buildx ls | grep -q multiarch; then \
-		echo "Creating multiarch builder..."; \
-		docker buildx create --name multiarch --driver docker-container --use --bootstrap; \
-		echo "✅ Multiarch builder ready"; \
-	else \
-		echo "✅ Multiarch builder already exists"; \
-		docker buildx use multiarch; \
-	fi
-
 .PHONY: docker-build
 docker-build:
 	docker build -t $(IMAGE_NAME):$(IMAGE_TAG) \
@@ -89,6 +78,15 @@ docker-push-multiarch: docker-buildx-setup
 		--build-arg COMMIT=$(COMMIT) \
 		--build-arg BUILD_DATE=$(BUILD_DATE) \
 		.
+
+
+.PHONY: podman-build-push
+podman-build-push:
+	podman build \
+	--platform linux/amd64,linux/arm64 \
+	--manifest=$(IMAGE_NAME):$(IMAGE_TAG) \
+	. && \
+	podman manifest push $(IMAGE_NAME):$(IMAGE_TAG) 
 
 .PHONY: all
 all: fmt vet lint test build

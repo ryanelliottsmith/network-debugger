@@ -1,0 +1,2 @@
+- port-connectivity tests need to run on host-network only, and the agent should attempt to bind to all ports(and silently continue if something is already listening on that port)
+- connectivity and bandwidth tests should show the host name in brackets next to the target IP, so that IPs(both pod and hostNetwork IPs) can be easily linked to a host

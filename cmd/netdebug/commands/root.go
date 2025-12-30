@@ -40,6 +40,7 @@ func init() {
 	rootCmd.AddCommand(deployCmd)
 
 	rootCmd.PersistentFlags().StringP("output", "o", "table", "Output format (table, json, yaml)")
+	rootCmd.PersistentFlags().Bool("debug", false, "Enable debug output")
 }
 
 func exitWithError(msg string, args ...interface{}) {

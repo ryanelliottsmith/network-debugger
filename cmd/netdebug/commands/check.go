@@ -95,11 +95,8 @@ var checkBandwidthCmd = &cobra.Command{
 		}
 
 		duration, _ := cmd.Flags().GetInt("duration")
-		if duration == 0 {
-			duration = 10
-		}
-
-		check := checks.NewBandwidthCheck(duration)
+		debug, _ := cmd.Flags().GetBool("debug")
+		check := checks.NewBandwidthCheck(duration, debug)
 		result := checks.RunWithTimeout(check, target, time.Duration(duration+5)*time.Second)
 
 		format, _ := cmd.Flags().GetString("output")
@@ -161,5 +158,5 @@ func init() {
 	checkPortsCmd.Flags().StringSlice("ports", []string{}, "Ports to check (format: 8080/tcp:name)")
 
 	checkBandwidthCmd.Flags().String("target", "", "Target host for bandwidth test")
-	checkBandwidthCmd.Flags().Int("duration", 10, "Test duration in seconds")
+	checkBandwidthCmd.Flags().Int("duration", 30, "Test duration in seconds")
 }

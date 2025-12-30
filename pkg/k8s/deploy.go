@@ -15,24 +15,34 @@ import (
 )
 
 func Install(ctx context.Context, clientset *kubernetes.Clientset, dynamicClient dynamic.Interface, namespace, imageOverride string) error {
-	if err := applyYAML(ctx, dynamicClient, manifests.NamespaceYAML); err != nil {
-		return fmt.Errorf("failed to apply namespace: %w", err)
+	// Replace namespace in all manifests
+	replaceNamespace := func(yaml string) string {
+		yaml = strings.ReplaceAll(yaml, "namespace: netdebug", "namespace: "+namespace)
+		yaml = strings.ReplaceAll(yaml, "name: netdebug", "name: "+namespace)
+		return yaml
 	}
 
-	if err := applyYAML(ctx, dynamicClient, manifests.RBACYAML); err != nil {
-		return fmt.Errorf("failed to apply RBAC: %w", err)
-	}
-
-	if err := applyYAML(ctx, dynamicClient, manifests.ConfigMapYAML); err != nil {
-		return fmt.Errorf("failed to apply ConfigMap: %w", err)
-	}
-
-	hostDS := manifests.DaemonSetHostYAML
-	overlayDS := manifests.DaemonSetOverlayYAML
+	namespaceYAML := replaceNamespace(manifests.NamespaceYAML)
+	rbacYAML := replaceNamespace(manifests.RBACYAML)
+	configMapYAML := replaceNamespace(manifests.ConfigMapYAML)
+	hostDS := replaceNamespace(manifests.DaemonSetHostYAML)
+	overlayDS := replaceNamespace(manifests.DaemonSetOverlayYAML)
 
 	if imageOverride != "" {
 		hostDS = strings.ReplaceAll(hostDS, "ghcr.io/ryanelliottsmith/network-debugger:latest", imageOverride)
 		overlayDS = strings.ReplaceAll(overlayDS, "ghcr.io/ryanelliottsmith/network-debugger:latest", imageOverride)
+	}
+
+	if err := applyYAML(ctx, dynamicClient, namespaceYAML); err != nil {
+		return fmt.Errorf("failed to apply namespace: %w", err)
+	}
+
+	if err := applyYAML(ctx, dynamicClient, rbacYAML); err != nil {
+		return fmt.Errorf("failed to apply RBAC: %w", err)
+	}
+
+	if err := applyYAML(ctx, dynamicClient, configMapYAML); err != nil {
+		return fmt.Errorf("failed to apply ConfigMap: %w", err)
 	}
 
 	if err := applyYAML(ctx, dynamicClient, hostDS); err != nil {
@@ -47,15 +57,22 @@ func Install(ctx context.Context, clientset *kubernetes.Clientset, dynamicClient
 }
 
 func Uninstall(ctx context.Context, dynamicClient dynamic.Interface, namespace string) error {
-	manifests := []string{
-		manifests.DaemonSetOverlayYAML,
-		manifests.DaemonSetHostYAML,
-		manifests.ConfigMapYAML,
-		manifests.RBACYAML,
-		manifests.NamespaceYAML,
+	// Replace namespace in all manifests
+	replaceNamespace := func(yaml string) string {
+		yaml = strings.ReplaceAll(yaml, "namespace: netdebug", "namespace: "+namespace)
+		yaml = strings.ReplaceAll(yaml, "name: netdebug", "name: "+namespace)
+		return yaml
 	}
 
-	for _, manifest := range manifests {
+	manifestList := []string{
+		replaceNamespace(manifests.DaemonSetOverlayYAML),
+		replaceNamespace(manifests.DaemonSetHostYAML),
+		replaceNamespace(manifests.ConfigMapYAML),
+		replaceNamespace(manifests.RBACYAML),
+		replaceNamespace(manifests.NamespaceYAML),
+	}
+
+	for _, manifest := range manifestList {
 		if err := deleteYAML(ctx, dynamicClient, manifest); err != nil {
 			fmt.Printf("Warning: failed to delete resource: %v\n", err)
 		}
