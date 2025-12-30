@@ -1,9 +1,11 @@
-FROM golang:1.25-bookworm AS builder
+FROM --platform=$BUILDPLATFORM golang:1.25-bookworm AS builder
 
 WORKDIR /build
 
-# Set GOTOOLCHAIN to allow auto-download of newer Go versions
 ENV GOTOOLCHAIN=auto
+
+ARG TARGETOS
+ARG TARGETARCH
 
 COPY go.mod go.sum ./
 RUN go mod download
@@ -13,7 +15,7 @@ COPY . .
 ARG VERSION=dev
 ARG COMMIT=unknown
 ARG BUILD_DATE=unknown
-RUN CGO_ENABLED=0 GOOS=linux go build \
+RUN CGO_ENABLED=0 GOOS=${TARGETOS} GOARCH=${TARGETARCH} go build \
     -ldflags="-w -s -X main.version=${VERSION} -X main.commit=${COMMIT} -X main.buildDate=${BUILD_DATE}" \
     -o netdebug \
     ./cmd/netdebug
