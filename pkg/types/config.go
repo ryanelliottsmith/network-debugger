@@ -13,7 +13,6 @@ type BandwidthTest struct {
 	SourceNode string `json:"source_node"`
 	TargetNode string `json:"target_node"`
 	TargetIP   string `json:"target_ip"`
-	Duration   int    `json:"duration_seconds,omitempty"`
 }
 
 type Config struct {

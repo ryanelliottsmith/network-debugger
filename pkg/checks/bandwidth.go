@@ -12,9 +12,10 @@ import (
 	"github.com/ryanelliottsmith/network-debugger/pkg/types"
 )
 
+const BandwidthDuration = 30
+
 type BandwidthCheck struct {
-	Duration int
-	Debug    bool
+	Debug bool
 }
 
 func (c *BandwidthCheck) Name() string {
@@ -33,7 +34,7 @@ func (c *BandwidthCheck) Run(ctx context.Context, target string) (*types.TestRes
 
 	var lastErr error
 	for attempt := 1; attempt <= maxRetries; attempt++ {
-		details, err := c.runIperf3(ctx, target, c.Duration, attempt)
+		details, err := c.runIperf3(ctx, target, attempt)
 		if err == nil {
 			if c.Debug {
 				log.Printf("[bandwidth] Result: %.2f Mbps, %d retransmits", details.BandwidthMbps, details.Retransmits)
@@ -72,11 +73,11 @@ func (c *BandwidthCheck) Run(ctx context.Context, target string) (*types.TestRes
 	return result, nil
 }
 
-func (c *BandwidthCheck) runIperf3(ctx context.Context, target string, duration int, attempt int) (types.BandwidthCheckDetails, error) {
+func (c *BandwidthCheck) runIperf3(ctx context.Context, target string, attempt int) (types.BandwidthCheckDetails, error) {
 	if c.Debug {
-		log.Printf("[bandwidth] Starting iperf3 test to %s for %d seconds (attempt %d)", target, duration, attempt)
+		log.Printf("[bandwidth] Starting iperf3 test to %s for %d seconds (attempt %d)", target, BandwidthDuration, attempt)
 	}
-	cmd := exec.CommandContext(ctx, "iperf3", "-c", target, "-J", "-t", fmt.Sprintf("%d", duration))
+	cmd := exec.CommandContext(ctx, "iperf3", "-c", target, "-J", "-t", fmt.Sprintf("%d", BandwidthDuration))
 	output, err := cmd.CombinedOutput()
 
 	if c.Debug {
@@ -103,7 +104,7 @@ func (c *BandwidthCheck) runIperf3(ctx context.Context, target string, duration 
 func (c *BandwidthCheck) parseIperf3Output(output []byte) (types.BandwidthCheckDetails, error) {
 	details := types.BandwidthCheckDetails{
 		Protocol: "tcp",
-		Duration: c.Duration,
+		Duration: BandwidthDuration,
 	}
 
 	var iperf3Result struct {
@@ -134,9 +135,8 @@ func (c *BandwidthCheck) parseIperf3Output(output []byte) (types.BandwidthCheckD
 	return details, nil
 }
 
-func NewBandwidthCheck(duration int, debug bool) *BandwidthCheck {
+func NewBandwidthCheck(debug bool) *BandwidthCheck {
 	return &BandwidthCheck{
-		Duration: duration,
-		Debug:    debug,
+		Debug: debug,
 	}
 }

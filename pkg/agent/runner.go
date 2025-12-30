@@ -123,13 +123,8 @@ func runBandwidthTest(ctx context.Context, test *types.BandwidthTest, self *Self
 		log.Printf("Failed to emit test start: %v", err)
 	}
 
-	duration := test.Duration
-	if duration == 0 {
-		duration = 30
-	}
-
-	check := checks.NewBandwidthCheck(duration, debug)
-	result := checks.RunWithTimeout(check, test.TargetIP, time.Duration(duration+5)*time.Second)
+	check := checks.NewBandwidthCheck(debug)
+	result := checks.RunWithTimeout(check, test.TargetIP, time.Duration(checks.BandwidthDuration+5)*time.Second)
 	result.Node = self.NodeName
 
 	if err := EmitTestResult(self, result, runID); err != nil {
