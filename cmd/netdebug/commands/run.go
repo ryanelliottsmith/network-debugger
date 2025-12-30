@@ -200,7 +200,7 @@ func runTests(cmd *cobra.Command, args []string) error {
 	fmt.Println("📊 Test Results")
 	fmt.Println(strings.Repeat("=", 80) + "\n")
 
-	if err := output.FormatEvents(allEvents, outputFormat); err != nil {
+	if err := output.FormatEvents(allEvents, outputFormat, debug); err != nil {
 		return fmt.Errorf("failed to format output: %w", err)
 	}
 

@@ -105,14 +105,14 @@ func printTableSummary(summary *types.TestSummary) error {
 	return nil
 }
 
-func FormatEvents(events []*types.Event, format string) error {
+func FormatEvents(events []*types.Event, format string, debug bool) error {
 	switch format {
 	case "json":
 		return printJSON(events)
 	case "yaml":
 		return printYAML(events)
 	case "table":
-		return printEventsTable(events)
+		return printEventsTable(events, debug)
 	default:
 		return fmt.Errorf("unknown format: %s", format)
 	}
@@ -162,7 +162,7 @@ func formatBandwidthMap(m map[string]interface{}) string {
 	return fmt.Sprintf("%.2f Mbps, %d retransmits", mbps, int(retransmits))
 }
 
-func printEventsTable(events []*types.Event) error {
+func printEventsTable(events []*types.Event, debug bool) error {
 	if len(events) == 0 {
 		fmt.Println("No test results collected.")
 		return nil
@@ -178,14 +178,19 @@ func printEventsTable(events []*types.Event) error {
 
 	for _, event := range events {
 		if event.Type == types.EventTypeTestResult {
-			eventsByCheck[event.Check] = append(eventsByCheck[event.Check], event)
+			// Always count for summary
 			if event.Status == "fail" {
 				failed++
 			} else {
 				passed++
 			}
+			// Only include in display if failed OR debug mode
+			if event.Status == "fail" || debug {
+				eventsByCheck[event.Check] = append(eventsByCheck[event.Check], event)
+			}
 		} else if event.Type == types.EventTypeError {
 			errors++
+			eventsByCheck[event.Check] = append(eventsByCheck[event.Check], event)
 		}
 	}
 
