@@ -32,7 +32,7 @@ func RunTests(ctx context.Context, config *types.Config, self *SelfInfo) error {
 	wg.Wait()
 
 	if config.BandwidthTest != nil && config.BandwidthTest.Active {
-		if config.BandwidthTest.SourceNode == self.NodeName {
+		if config.BandwidthTest.SourcePod == self.PodName {
 			runBandwidthTest(ctx, config.BandwidthTest, self, config.RunID, config.Debug)
 		}
 	}
@@ -126,6 +126,7 @@ func runBandwidthTest(ctx context.Context, test *types.BandwidthTest, self *Self
 	check := checks.NewBandwidthCheck(debug)
 	result := checks.RunWithTimeout(check, test.TargetIP, time.Duration(checks.BandwidthDuration+5)*time.Second)
 	result.Node = self.NodeName
+	result.Target = test.TargetNode
 
 	if err := EmitTestResult(self, result, runID); err != nil {
 		log.Printf("Failed to emit test result: %v", err)

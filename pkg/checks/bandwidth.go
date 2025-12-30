@@ -12,7 +12,7 @@ import (
 	"github.com/ryanelliottsmith/network-debugger/pkg/types"
 )
 
-const BandwidthDuration = 30
+const BandwidthDuration = 10
 
 type BandwidthCheck struct {
 	Debug bool

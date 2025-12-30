@@ -11,6 +11,7 @@ type TargetNode struct {
 type BandwidthTest struct {
 	Active     bool   `json:"active"`
 	SourceNode string `json:"source_node"`
+	SourcePod  string `json:"source_pod"`
 	TargetNode string `json:"target_node"`
 	TargetIP   string `json:"target_ip"`
 }

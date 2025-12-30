@@ -139,5 +139,59 @@ func GenerateBandwidthPairs(targets []types.TargetNode) [][2]types.TargetNode {
 		}
 	}
 
-	return pairs
+	return reorderPairsForSpacing(pairs)
+}
+
+// reorderPairsForSpacing reorders test pairs so consecutive tests don't share nodes.
+// This gives each node "rest time" between bandwidth tests.
+func reorderPairsForSpacing(pairs [][2]types.TargetNode) [][2]types.TargetNode {
+	if len(pairs) <= 1 {
+		return pairs
+	}
+
+	result := make([][2]types.TargetNode, 0, len(pairs))
+	used := make([]bool, len(pairs))
+	lastUsed := make(map[string]int) // node -> iteration when last used (0 = never)
+	iteration := 1
+
+	for len(result) < len(pairs) {
+		bestIdx := -1
+		bestScore := -1
+
+		for i, pair := range pairs {
+			if used[i] {
+				continue
+			}
+
+			// Score = minimum "rest time" of the two nodes
+			// Higher score = both nodes have been idle longer
+			// Nodes never used (lastUsed=0) get max rest time
+			restA := iteration
+			if last := lastUsed[pair[0].NodeName]; last > 0 {
+				restA = iteration - last
+			}
+			restB := iteration
+			if last := lastUsed[pair[1].NodeName]; last > 0 {
+				restB = iteration - last
+			}
+			score := min(restA, restB)
+
+			if score > bestScore {
+				bestScore = score
+				bestIdx = i
+			}
+		}
+
+		if bestIdx == -1 {
+			break
+		}
+
+		used[bestIdx] = true
+		result = append(result, pairs[bestIdx])
+		lastUsed[pairs[bestIdx][0].NodeName] = iteration
+		lastUsed[pairs[bestIdx][1].NodeName] = iteration
+		iteration++
+	}
+
+	return result
 }

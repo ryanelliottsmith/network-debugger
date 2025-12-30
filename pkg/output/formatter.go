@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
+	"sort"
 	"strings"
 
 	"github.com/ryanelliottsmith/network-debugger/pkg/types"
@@ -193,6 +194,13 @@ func printEventsTable(events []*types.Event) error {
 		checkEvents, ok := eventsByCheck[check]
 		if !ok || len(checkEvents) == 0 {
 			continue
+		}
+
+		// Sort bandwidth results by source node name
+		if check == "bandwidth" {
+			sort.Slice(checkEvents, func(i, j int) bool {
+				return checkEvents[i].Node < checkEvents[j].Node
+			})
 		}
 
 		// Print check header

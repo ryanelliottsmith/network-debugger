@@ -20,7 +20,7 @@ func Run(ctx context.Context, mode, configRef string) error {
 	log.Printf("Agent info: node=%s, pod=%s, podIP=%s, hostIP=%s",
 		self.NodeName, self.PodName, self.PodIP, self.HostIP)
 
-	if err := StartIperf3Server(); err != nil {
+	if err := StartIperf3Server(ctx); err != nil {
 		log.Printf("WARNING: Failed to start iperf3 server: %v", err)
 		log.Printf("Bandwidth tests will be skipped on this node")
 	} else {

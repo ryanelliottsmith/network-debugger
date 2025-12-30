@@ -270,6 +270,7 @@ func runBandwidthTests(ctx context.Context, coord *coordinator.Coordinator, targ
 			BandwidthTest: &types.BandwidthTest{
 				Active:     true,
 				SourceNode: source.NodeName,
+				SourcePod:  source.PodName,
 				TargetNode: target.NodeName,
 				TargetIP:   target.IP,
 			},
