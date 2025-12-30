@@ -37,11 +37,12 @@ func ReadyEvent(node, network, pod, runID string) *Event {
 	}
 }
 
-func TestStartEvent(node, network, check, target, runID string) *Event {
+func TestStartEvent(node, network, pod, check, target, runID string) *Event {
 	return &Event{
 		Type:      EventTypeTestStart,
 		Node:      node,
 		Network:   network,
+		Pod:       pod,
 		Check:     check,
 		Target:    target,
 		RunID:     runID,
@@ -49,11 +50,12 @@ func TestStartEvent(node, network, check, target, runID string) *Event {
 	}
 }
 
-func TestResultEvent(node, network, check, target, status string, details interface{}, runID string) *Event {
+func TestResultEvent(node, network, pod, check, target, status string, details interface{}, runID string) *Event {
 	return &Event{
 		Type:      EventTypeTestResult,
 		Node:      node,
 		Network:   network,
+		Pod:       pod,
 		Check:     check,
 		Target:    target,
 		Status:    status,
@@ -63,22 +65,24 @@ func TestResultEvent(node, network, check, target, status string, details interf
 	}
 }
 
-func ErrorEvent(node, network, errMsg, runID string) *Event {
+func ErrorEvent(node, network, pod, errMsg, runID string) *Event {
 	return &Event{
 		Type:      EventTypeError,
 		Node:      node,
 		Network:   network,
+		Pod:       pod,
 		Error:     errMsg,
 		RunID:     runID,
 		Timestamp: time.Now(),
 	}
 }
 
-func CompleteEvent(node, network string, summary interface{}, runID string) *Event {
+func CompleteEvent(node, network, pod string, summary interface{}, runID string) *Event {
 	return &Event{
 		Type:      EventTypeComplete,
 		Node:      node,
 		Network:   network,
+		Pod:       pod,
 		Details:   summary,
 		RunID:     runID,
 		Timestamp: time.Now(),

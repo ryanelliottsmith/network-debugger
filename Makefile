@@ -21,15 +21,7 @@ build:
 .PHONY: install
 install:
 	go install $(LDFLAGS) ./cmd/netdebug
-
-.PHONY: test
-test:
-	go test -v -race -coverprofile=coverage.out ./...
-
-.PHONY: test-coverage
-test-coverage: test
-	go tool cover -html=coverage.out
-
+	
 .PHONY: lint
 lint:
 	golangci-lint run

@@ -22,7 +22,7 @@ func EmitReady(self *SelfInfo, runID string) error {
 }
 
 func EmitTestStart(self *SelfInfo, check, target, runID string) error {
-	event := types.TestStartEvent(self.NodeName, "", check, target, runID)
+	event := types.TestStartEvent(self.NodeName, "", self.PodName, check, target, runID)
 	return EmitEvent(event)
 }
 
@@ -35,6 +35,7 @@ func EmitTestResult(self *SelfInfo, result *types.TestResult, runID string) erro
 	event := types.TestResultEvent(
 		self.NodeName,
 		"",
+		self.PodName,
 		result.Check,
 		result.Target,
 		status,
@@ -50,11 +51,11 @@ func EmitTestResult(self *SelfInfo, result *types.TestResult, runID string) erro
 }
 
 func EmitComplete(self *SelfInfo, runID string, summary interface{}) error {
-	event := types.CompleteEvent(self.NodeName, "", summary, runID)
+	event := types.CompleteEvent(self.NodeName, "", self.PodName, summary, runID)
 	return EmitEvent(event)
 }
 
 func EmitError(self *SelfInfo, runID, errMsg string) error {
-	event := types.ErrorEvent(self.NodeName, "", errMsg, runID)
+	event := types.ErrorEvent(self.NodeName, "", self.PodName, errMsg, runID)
 	return EmitEvent(event)
 }
