@@ -9,37 +9,38 @@ type PortCheck struct {
 func DefaultPorts() []PortCheck {
 	return []PortCheck{
 		// Kubernetes core
-		{Port: 6443, Protocol: "tcp", Name: "kube-apiserver"},
+		// TODO: Separate port checks between controlplane and worker nodes
+		//{Port: 6443, Protocol: "tcp", Name: "kube-apiserver"},
 		{Port: 10250, Protocol: "tcp", Name: "kubelet"},
-		{Port: 10255, Protocol: "tcp", Name: "kubelet-readonly"},
+		//{Port: 10255, Protocol: "tcp", Name: "kubelet-readonly"},
 
 		// RKE2/K3s specific
-		{Port: 9345, Protocol: "tcp", Name: "rke2-supervisor"},
+		//{Port: 9345, Protocol: "tcp", Name: "rke2-supervisor"},
 
 		// etcd
-		{Port: 2379, Protocol: "tcp", Name: "etcd-client"},
-		{Port: 2380, Protocol: "tcp", Name: "etcd-peer"},
+		//{Port: 2379, Protocol: "tcp", Name: "etcd-client"},
+		//{Port: 2380, Protocol: "tcp", Name: "etcd-peer"},
 
 		// CNI - Flannel
-		{Port: 8472, Protocol: "udp", Name: "vxlan-flannel"},
-		{Port: 51820, Protocol: "udp", Name: "wireguard-ipv4"},
-		{Port: 51821, Protocol: "udp", Name: "wireguard-ipv6"},
+		//{Port: 8472, Protocol: "udp", Name: "vxlan-flannel"},
+		//{Port: 51820, Protocol: "udp", Name: "wireguard-ipv4"},
+		//{Port: 51821, Protocol: "udp", Name: "wireguard-ipv6"},
 
 		// CNI - Calico
-		{Port: 4789, Protocol: "udp", Name: "vxlan-calico"},
-		{Port: 179, Protocol: "tcp", Name: "bgp-calico"},
-		{Port: 5473, Protocol: "tcp", Name: "calico-typha"},
+		//{Port: 4789, Protocol: "udp", Name: "vxlan-calico"},
+		//{Port: 179, Protocol: "tcp", Name: "bgp-calico"},
+		//{Port: 5473, Protocol: "tcp", Name: "calico-typha"},
 
 		// CNI - Cilium
-		{Port: 4240, Protocol: "tcp", Name: "cilium-health"},
-		{Port: 4244, Protocol: "tcp", Name: "hubble-peer"},
-		{Port: 4245, Protocol: "tcp", Name: "hubble-relay"},
+		//{Port: 4240, Protocol: "tcp", Name: "cilium-health"},
+		//{Port: 4244, Protocol: "tcp", Name: "hubble-peer"},
+		//{Port: 4245, Protocol: "tcp", Name: "hubble-relay"},
 
 		// Metrics
-		{Port: 10249, Protocol: "tcp", Name: "kube-proxy-metrics"},
-		{Port: 10256, Protocol: "tcp", Name: "kube-proxy-health"},
-		{Port: 10257, Protocol: "tcp", Name: "kube-controller-manager"},
-		{Port: 10259, Protocol: "tcp", Name: "kube-scheduler"},
+		//{Port: 10249, Protocol: "tcp", Name: "kube-proxy-metrics"},
+		//{Port: 10256, Protocol: "tcp", Name: "kube-proxy-health"},
+		//{Port: 10257, Protocol: "tcp", Name: "kube-controller-manager"},
+		//{Port: 10259, Protocol: "tcp", Name: "kube-scheduler"},
 	}
 }
 
