@@ -1,5 +1,8 @@
 # Network Debugger
 
+> [!IMPORTANT]
+This is a WIP. A lot of functionality is either entirely missing, or incomplete
+
 A comprehensive network debugging tool for Kubernetes clusters (RKE2/K3s). Helps diagnose connectivity issues, DNS problems, port accessibility, bandwidth constraints, and host configuration issues.
 
 ## Features
