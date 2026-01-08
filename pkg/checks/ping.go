@@ -10,6 +10,9 @@ import (
 	"github.com/ryanelliottsmith/network-debugger/pkg/types"
 )
 
+// DefaultPingCount is the default number of ping packets to send
+const DefaultPingCount = 5
+
 type PingCheck struct {
 	Count int
 }
@@ -27,7 +30,7 @@ func (c *PingCheck) Run(ctx context.Context, target string) (*types.TestResult, 
 
 	count := c.Count
 	if count == 0 {
-		count = 5
+		count = DefaultPingCount
 	}
 
 	cmd := exec.CommandContext(ctx, "ping", "-c", strconv.Itoa(count), "-W", "1", target)
@@ -113,6 +116,9 @@ func (c *PingCheck) parsePingOutput(output string) (types.PingCheckDetails, erro
 }
 
 func NewPingCheck(count int) *PingCheck {
+	if count == 0 {
+		count = DefaultPingCount
+	}
 	return &PingCheck{
 		Count: count,
 	}
