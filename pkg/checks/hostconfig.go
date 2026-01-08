@@ -3,13 +3,12 @@ package checks
 import (
 	"context"
 	"fmt"
-	"os"
 	"os/exec"
 	"regexp"
 	"strconv"
-	"strings"
 
 	"github.com/ryanelliottsmith/network-debugger/pkg/types"
+	"github.com/ryanelliottsmith/network-debugger/pkg/util"
 )
 
 type HostConfigCheck struct{}
@@ -31,7 +30,7 @@ func (c *HostConfigCheck) Run(ctx context.Context, target string) (*types.TestRe
 
 	var issues []string
 
-	ipForward, err := c.readSysctl("/proc/sys/net/ipv4/ip_forward")
+	ipForward, err := util.ReadSysctl("/proc/sys/net/ipv4/ip_forward")
 	if err != nil {
 		issues = append(issues, fmt.Sprintf("failed to read ip_forward: %v", err))
 	} else if ipForward != "1" {
@@ -59,7 +58,7 @@ func (c *HostConfigCheck) Run(ctx context.Context, target string) (*types.TestRe
 	}
 
 	for name, path := range kernelParams {
-		value, err := c.readSysctl(path)
+		value, err := util.ReadSysctl(path)
 		if err == nil {
 			details.KernelParams[name] = value
 		}
@@ -77,14 +76,6 @@ func (c *HostConfigCheck) Run(ctx context.Context, target string) (*types.TestRe
 	result.Details["hostconfig"] = details
 
 	return result, nil
-}
-
-func (c *HostConfigCheck) readSysctl(path string) (string, error) {
-	data, err := os.ReadFile(path)
-	if err != nil {
-		return "", err
-	}
-	return strings.TrimSpace(string(data)), nil
 }
 
 func (c *HostConfigCheck) getMTU(ctx context.Context) (int, error) {

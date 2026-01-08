@@ -8,6 +8,7 @@ import (
 	"strings"
 
 	"github.com/ryanelliottsmith/network-debugger/pkg/types"
+	"github.com/ryanelliottsmith/network-debugger/pkg/util"
 )
 
 type ConntrackCheck struct{}
@@ -27,7 +28,7 @@ func (c *ConntrackCheck) Run(ctx context.Context, target string) (*types.TestRes
 	var issues []string
 
 	// Check if conntrack is available by looking for the count file
-	entries, err := c.readSysctl("/proc/sys/net/netfilter/nf_conntrack_count")
+	entries, err := util.ReadSysctl("/proc/sys/net/netfilter/nf_conntrack_count")
 	if os.IsNotExist(err) {
 		// Conntrack module not loaded
 		result.Status = types.StatusFail
@@ -41,7 +42,7 @@ func (c *ConntrackCheck) Run(ctx context.Context, target string) (*types.TestRes
 		details.Entries, _ = strconv.Atoi(entries)
 	}
 
-	maxEntries, err := c.readSysctl("/proc/sys/net/netfilter/nf_conntrack_max")
+	maxEntries, err := util.ReadSysctl("/proc/sys/net/netfilter/nf_conntrack_max")
 	if err != nil && !os.IsNotExist(err) {
 		issues = append(issues, fmt.Sprintf("failed to read conntrack max: %v", err))
 	} else if err == nil {
@@ -83,14 +84,6 @@ func (c *ConntrackCheck) Run(ctx context.Context, target string) (*types.TestRes
 	result.Details["conntrack"] = details
 
 	return result, nil
-}
-
-func (c *ConntrackCheck) readSysctl(path string) (string, error) {
-	data, err := os.ReadFile(path)
-	if err != nil {
-		return "", err
-	}
-	return strings.TrimSpace(string(data)), nil
 }
 
 func (c *ConntrackCheck) readConntrackStats() (map[string]int, error) {
