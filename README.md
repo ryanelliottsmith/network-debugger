@@ -7,8 +7,8 @@ A comprehensive network debugging tool for Kubernetes clusters (RKE2/K3s). Helps
 
 ## Features
 
-- **Coordinated Testing**: Deploy as DaemonSet and run tests across all cluster nodes
-- **Multiple Network Paths**: Test both hostNetwork and overlay (CNI) network paths
+- **Coordinated Testing**: Deploys two DaemonSets (one with hostNetwork, one on overlay network) and runs tests across all cluster nodes
+- **Dual Network Path Testing**: Connectivity checks (ping, ports, bandwidth) run on both hostNetwork and overlay (CNI) pods to test both network paths
 - **Comprehensive Checks**:
   - DNS resolution (cluster DNS, external DNS, custom servers)
   - ICMP ping connectivity with latency stats
@@ -17,8 +17,26 @@ A comprehensive network debugging tool for Kubernetes clusters (RKE2/K3s). Helps
   - Host configuration (IP forwarding, MTU, kernel params)
   - Conntrack statistics and failure detection
   - iptables/nftables duplicate rule detection
-- **Flexible Deployment**: Run as coordinated DaemonSet or standalone container
+- **Flexible Deployment**: Run as coordinated DaemonSet
 - **Multiple Output Formats**: Table, JSON, YAML
+
+## Check Types
+
+### Connectivity Checks
+These checks test network connectivity between nodes and **run on both DaemonSet pods** (hostNetwork and overlay) to test both network paths:
+- **ping**: ICMP connectivity with latency statistics
+- **ports**: TCP/UDP port accessibility
+- **bandwidth**: iperf3-based throughput testing
+
+### Node-Wide Checks
+These checks run on all pods (both networks) across all nodes:
+- **dns**: DNS resolution testing
+
+### Local Configuration Checks
+These checks examine local node configuration and **run once per node** (hostNetwork pod only):
+- **hostconfig**: IP forwarding, MTU, kernel parameters
+- **conntrack**: Connection tracking statistics and capacity
+- **iptables**: iptables/nftables configuration and conflicts
 
 ## Installation
 
@@ -39,6 +57,12 @@ docker pull ghcr.io/ryanelliottsmith/network-debugger:latest
 
 ### Coordinated Cluster Testing
 
+The tool deploys two DaemonSets to test both network paths:
+- **hostNetwork DaemonSet**: Tests connectivity via the host network and runs local configuration checks
+- **overlay DaemonSet**: Tests connectivity via the CNI overlay network
+
+Connectivity checks (ping, ports, bandwidth) run on both pods to compare network performance and identify path-specific issues.
+
 Deploy and run comprehensive tests across all nodes:
 
 ```bash
@@ -56,33 +80,6 @@ netdebug run --no-host-network
 
 # Cleanup DaemonSet after completion
 netdebug run --cleanup
-```
-
-### Standalone Checks
-
-Run individual checks locally:
-
-```bash
-# DNS check
-netdebug check dns --servers=8.8.8.8,1.1.1.1
-
-# Ping test
-netdebug check ping --targets=10.0.0.1,10.0.0.2
-
-# Port connectivity
-netdebug check ports --targets=10.0.0.1 --ports=6443/tcp:api,10250/tcp:kubelet
-
-# Host configuration
-netdebug check hostconfig
-
-# Conntrack statistics
-netdebug check conntrack
-
-# iptables check
-netdebug check iptables
-
-# Bandwidth test
-netdebug check bandwidth --target=10.0.0.1 --duration=10s
 ```
 
 ### DaemonSet Management
@@ -118,38 +115,57 @@ DaemonSet Pods (netdebug agent --mode=configmap)
   └─ Return to watching for next run
 ```
 
-### Standalone Mode
-
-Run the container directly for local testing:
-
-```bash
-# Using kubectl
-kubectl run netdebug --rm -it \
-  --image=ghcr.io/ryanelliottsmith/network-debugger:latest \
-  -- agent --checks=dns,hostconfig
-
-# Using Docker
-docker run --rm \
-  ghcr.io/ryanelliottsmith/network-debugger:latest \
-  agent --checks=hostconfig,conntrack
-```
-
 ## Default Ports
 
-The tool includes default port checks for RKE2/K3s clusters:
+The tool includes default port checks for RKE2/K3s clusters. Most ports are currently disabled pending further testing.
 
+### Currently Tested Ports
+
+| Port | Protocol | Service | Status |
+|------|----------|---------|--------|
+| 10250 | TCP | kubelet | ✅ Enabled |
+
+### Available But Disabled Ports
+
+The following ports are defined but currently disabled in the default configuration:
+
+**Kubernetes Core:**
+| Port | Protocol | Service | Notes |
+|------|----------|---------|-------|
+| 6443 | TCP | kube-apiserver | Control plane only |
+| 10255 | TCP | kubelet-readonly | Deprecated in newer versions |
+
+**RKE2/K3s Specific:**
 | Port | Protocol | Service |
 |------|----------|---------|
-| 6443 | TCP | kube-apiserver |
-| 10250 | TCP | kubelet |
 | 9345 | TCP | RKE2 supervisor |
-| 2379-2380 | TCP | etcd |
-| 8472 | UDP | VXLAN (Flannel) |
-| 51820-51821 | UDP | WireGuard |
-| 179 | TCP | BGP (Calico) |
+
+**etcd:**
+| Port | Protocol | Service |
+|------|----------|---------|
+| 2379 | TCP | etcd-client |
+| 2380 | TCP | etcd-peer |
+
+**CNI - Flannel:**
+| Port | Protocol | Service |
+|------|----------|---------|
+| 8472 | UDP | VXLAN |
+| 51820 | UDP | WireGuard IPv4 |
+| 51821 | UDP | WireGuard IPv6 |
+
+**CNI - Calico:**
+| Port | Protocol | Service |
+|------|----------|---------|
+| 179 | TCP | BGP |
+
+**CNI - Cilium:**
+| Port | Protocol | Service |
+|------|----------|---------|
 | 4240 | TCP | Cilium health |
 
-Override with `--ports=8080/tcp:myapp,9000/udp:custom`
+To enable additional ports, see `pkg/types/ports.go` and uncomment the desired ports in the `DefaultPorts()` function.
+
+Override defaults with: `--ports=8080/tcp:myapp,9000/udp:custom`
 
 ## Output Formats
 
