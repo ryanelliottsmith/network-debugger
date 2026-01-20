@@ -6,6 +6,7 @@ import (
 	"strings"
 	"time"
 
+	checkspkg "github.com/ryanelliottsmith/network-debugger/pkg/checks"
 	"github.com/ryanelliottsmith/network-debugger/pkg/coordinator"
 	"github.com/ryanelliottsmith/network-debugger/pkg/k8s"
 	"github.com/ryanelliottsmith/network-debugger/pkg/output"
@@ -213,7 +214,7 @@ func runStandardTests(ctx context.Context, coord *coordinator.Coordinator, targe
 
 	runID := coordinator.GenerateRunID()
 
-	dnsNames := []string{"kubernetes.default.svc.cluster.local", "google.com"}
+	dnsNames := checkspkg.DefaultDNSNames
 	if isHostNetwork {
 		dnsNames = filterClusterLocalNames(dnsNames)
 	}

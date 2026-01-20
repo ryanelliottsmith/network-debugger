@@ -2,6 +2,7 @@ package commands
 
 import (
 	"fmt"
+	"strings"
 	"time"
 
 	"github.com/ryanelliottsmith/network-debugger/pkg/checks"
@@ -21,12 +22,8 @@ var checkDNSCmd = &cobra.Command{
 	RunE: func(cmd *cobra.Command, args []string) error {
 		names, _ := cmd.Flags().GetStringSlice("names")
 
-		if len(names) == 0 {
-			names = []string{"kubernetes.default.svc.cluster.local", "google.com"}
-		}
-
 		check := checks.NewDNSCheck(names, "")
-		result := checks.RunWithTimeout(check, "dns-test", 5*time.Second)
+		result := checks.RunWithTimeout(check, "dns-test", checks.DefaultCheckTimeout)
 
 		format, _ := cmd.Flags().GetString("output")
 		return output.PrintResult(result, format)
@@ -43,11 +40,11 @@ var checkPingCmd = &cobra.Command{
 			return fmt.Errorf("at least one target required (use --targets)")
 		}
 
-		check := checks.NewPingCheck(5)
+		check := checks.NewPingCheck(0)
 		format, _ := cmd.Flags().GetString("output")
 
 		for _, target := range targets {
-			result := checks.RunWithTimeout(check, target, 10*time.Second)
+			result := checks.RunWithTimeout(check, target, checks.DefaultPingTimeout)
 			if err := output.PrintResult(result, format); err != nil {
 				return err
 			}
@@ -73,7 +70,7 @@ var checkPortsCmd = &cobra.Command{
 		format, _ := cmd.Flags().GetString("output")
 
 		for _, target := range targets {
-			result := checks.RunWithTimeout(check, target, 30*time.Second)
+			result := checks.RunWithTimeout(check, target, checks.DefaultPortsTimeout)
 			if err := output.PrintResult(result, format); err != nil {
 				return err
 			}
@@ -108,7 +105,7 @@ var checkHostConfigCmd = &cobra.Command{
 	Short: "Check host configuration",
 	RunE: func(cmd *cobra.Command, args []string) error {
 		check := checks.NewHostConfigCheck()
-		result := checks.RunWithTimeout(check, "localhost", 5*time.Second)
+		result := checks.RunWithTimeout(check, "localhost", checks.DefaultCheckTimeout)
 
 		format, _ := cmd.Flags().GetString("output")
 		return output.PrintResult(result, format)
@@ -120,7 +117,7 @@ var checkConntrackCmd = &cobra.Command{
 	Short: "Check conntrack statistics",
 	RunE: func(cmd *cobra.Command, args []string) error {
 		check := checks.NewConntrackCheck()
-		result := checks.RunWithTimeout(check, "localhost", 5*time.Second)
+		result := checks.RunWithTimeout(check, "localhost", checks.DefaultCheckTimeout)
 
 		format, _ := cmd.Flags().GetString("output")
 		return output.PrintResult(result, format)
@@ -132,7 +129,7 @@ var checkIptablesCmd = &cobra.Command{
 	Short: "Check iptables configuration",
 	RunE: func(cmd *cobra.Command, args []string) error {
 		check := checks.NewIptablesCheck()
-		result := checks.RunWithTimeout(check, "localhost", 5*time.Second)
+		result := checks.RunWithTimeout(check, "localhost", checks.DefaultCheckTimeout)
 
 		format, _ := cmd.Flags().GetString("output")
 		return output.PrintResult(result, format)
@@ -149,7 +146,7 @@ func init() {
 	checkCmd.AddCommand(checkIptablesCmd)
 
 	checkDNSCmd.Flags().StringSlice("servers", []string{}, "DNS servers to test")
-	checkDNSCmd.Flags().StringSlice("names", []string{}, "Names to resolve (default: kubernetes.default.svc.cluster.local, google.com)")
+	checkDNSCmd.Flags().StringSlice("names", []string{}, fmt.Sprintf("Names to resolve (default: %s)", strings.Join(checks.DefaultDNSNames, ", ")))
 
 	checkPingCmd.Flags().StringSlice("targets", []string{}, "Target hosts to ping")
 

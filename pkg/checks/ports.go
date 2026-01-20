@@ -96,6 +96,9 @@ func (c *PortsCheck) checkPort(ctx context.Context, host string, port types.Port
 }
 
 func NewPortsCheck(ports []types.PortCheck) *PortsCheck {
+	if len(ports) == 0 {
+		ports = types.DefaultPorts()
+	}
 	return &PortsCheck{
 		Ports: ports,
 	}

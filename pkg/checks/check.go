@@ -7,6 +7,17 @@ import (
 	"github.com/ryanelliottsmith/network-debugger/pkg/types"
 )
 
+const (
+	// DefaultCheckTimeout is the default timeout for most checks
+	DefaultCheckTimeout = 5 * time.Second
+
+	// DefaultPingTimeout is the default timeout for ping checks
+	DefaultPingTimeout = 3 * time.Second
+
+	// DefaultPortsTimeout is the default timeout for port checks
+	DefaultPortsTimeout = 10 * time.Second
+)
+
 type Check interface {
 	Name() string
 	Run(ctx context.Context, target string) (*types.TestResult, error)

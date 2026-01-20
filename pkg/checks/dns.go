@@ -10,6 +10,9 @@ import (
 	"github.com/ryanelliottsmith/network-debugger/pkg/types"
 )
 
+// DefaultDNSNames are the default DNS names to resolve when none are specified
+var DefaultDNSNames = []string{"kubernetes.default.svc.cluster.local", "google.com"}
+
 type DNSCheck struct {
 	Names  []string
 	Server string
@@ -28,7 +31,7 @@ func (c *DNSCheck) Run(ctx context.Context, target string) (*types.TestResult, e
 
 	names := c.Names
 	if len(names) == 0 {
-		names = []string{"kubernetes.default.svc.cluster.local", "google.com"}
+		names = DefaultDNSNames
 	}
 
 	var allDetails []types.DNSCheckDetails
@@ -99,6 +102,9 @@ func (c *DNSCheck) resolveWithTiming(ctx context.Context, name string) (types.DN
 }
 
 func NewDNSCheck(names []string, server string) *DNSCheck {
+	if len(names) == 0 {
+		names = DefaultDNSNames
+	}
 	return &DNSCheck{
 		Names:  names,
 		Server: server,

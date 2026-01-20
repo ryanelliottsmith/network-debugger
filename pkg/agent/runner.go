@@ -65,7 +65,7 @@ func filterTargets(targets []types.TargetNode, selfNodeName string) []types.Targ
 
 func isLocalOnlyCheck(checkName string) bool {
 	switch checkName {
-	case "hostconfig", "conntrack", "iptables", "dns":
+	case "hostconfig", "conntrack", "iptables":
 		return true
 	default:
 		return false
@@ -87,22 +87,14 @@ func runSingleCheck(ctx context.Context, checkName, targetIP, targetNode string,
 
 	switch checkName {
 	case "dns":
-		names := config.DNSNames
-		if len(names) == 0 {
-			names = []string{"kubernetes.default.svc.cluster.local", "google.com"}
-		}
-		check = checks.NewDNSCheck(names, "")
+		check = checks.NewDNSCheck(config.DNSNames, "")
 		targetIP = "dns-test"
 
 	case "ping":
-		check = checks.NewPingCheck(5)
+		check = checks.NewPingCheck(0)
 
 	case "ports":
-		ports := config.Ports
-		if len(ports) == 0 {
-			ports = types.DefaultPorts()
-		}
-		check = checks.NewPortsCheck(ports)
+		check = checks.NewPortsCheck(config.Ports)
 
 	case "hostconfig":
 		check = checks.NewHostConfigCheck()
@@ -121,7 +113,7 @@ func runSingleCheck(ctx context.Context, checkName, targetIP, targetNode string,
 		return
 	}
 
-	result := checks.RunWithTimeout(check, targetIP, 5*time.Second)
+	result := checks.RunWithTimeout(check, targetIP, checks.DefaultCheckTimeout)
 	result.Node = self.NodeName
 
 	if err := EmitTestResult(self, result, config.RunID); err != nil {
