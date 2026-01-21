@@ -88,6 +88,19 @@ var deployUninstallCmd = &cobra.Command{
 	},
 }
 
+var deployTemplateCmd = &cobra.Command{
+	Use:   "template",
+	Short: "Output Kubernetes manifests to stdout",
+	Long:  "Output all Kubernetes manifests to stdout for customization before applying.\n\nExample:\n  netdebug deploy template > manifests.yaml\n  netdebug deploy template --namespace my-ns --image myrepo/netdebug:v1.0 > manifests.yaml",
+	RunE: func(cmd *cobra.Command, args []string) error {
+		namespace, _ := cmd.Flags().GetString("namespace")
+		imageOverride, _ := cmd.Flags().GetString("image")
+
+		fmt.Print(k8s.GetAllManifests(namespace, imageOverride))
+		return nil
+	},
+}
+
 var deployStatusCmd = &cobra.Command{
 	Use:   "status",
 	Short: "Check DaemonSet deployment status",
@@ -149,10 +162,12 @@ func init() {
 	deployCmd.AddCommand(deployInstallCmd)
 	deployCmd.AddCommand(deployUninstallCmd)
 	deployCmd.AddCommand(deployStatusCmd)
+	deployCmd.AddCommand(deployTemplateCmd)
 
-	for _, cmd := range []*cobra.Command{deployInstallCmd, deployUninstallCmd, deployStatusCmd} {
+	for _, cmd := range []*cobra.Command{deployInstallCmd, deployUninstallCmd, deployStatusCmd, deployTemplateCmd} {
 		cmd.Flags().StringP("namespace", "n", "netdebug", "Namespace for deployment")
 	}
 
 	deployInstallCmd.Flags().String("image", "", "Override default image (default: ghcr.io/ryanelliottsmith/network-debugger:"+version+")")
+	deployTemplateCmd.Flags().String("image", "", "Override default image (default: ghcr.io/ryanelliottsmith/network-debugger:"+version+")")
 }

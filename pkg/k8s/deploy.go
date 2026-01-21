@@ -18,11 +18,10 @@ func Install(ctx context.Context, clientset *kubernetes.Clientset, dynamicClient
 	// Replace namespace in all manifests
 	replaceNamespace := func(yaml string) string {
 		yaml = strings.ReplaceAll(yaml, "namespace: netdebug", "namespace: "+namespace)
-		yaml = strings.ReplaceAll(yaml, "name: netdebug", "name: "+namespace)
+		yaml = strings.ReplaceAll(yaml, "NAMESPACE_PLACEHOLDER", namespace)
 		return yaml
 	}
 
-	namespaceYAML := replaceNamespace(manifests.NamespaceYAML)
 	rbacYAML := replaceNamespace(manifests.RBACYAML)
 	configMapYAML := replaceNamespace(manifests.ConfigMapYAML)
 	hostDS := replaceNamespace(manifests.DaemonSetHostYAML)
@@ -31,10 +30,6 @@ func Install(ctx context.Context, clientset *kubernetes.Clientset, dynamicClient
 	if imageOverride != "" {
 		hostDS = strings.ReplaceAll(hostDS, "ghcr.io/ryanelliottsmith/network-debugger:latest", imageOverride)
 		overlayDS = strings.ReplaceAll(overlayDS, "ghcr.io/ryanelliottsmith/network-debugger:latest", imageOverride)
-	}
-
-	if err := applyYAML(ctx, dynamicClient, namespaceYAML); err != nil {
-		return fmt.Errorf("failed to apply namespace: %w", err)
 	}
 
 	if err := applyYAML(ctx, dynamicClient, rbacYAML); err != nil {
@@ -60,7 +55,7 @@ func Uninstall(ctx context.Context, dynamicClient dynamic.Interface, namespace s
 	// Replace namespace in all manifests
 	replaceNamespace := func(yaml string) string {
 		yaml = strings.ReplaceAll(yaml, "namespace: netdebug", "namespace: "+namespace)
-		yaml = strings.ReplaceAll(yaml, "name: netdebug", "name: "+namespace)
+		yaml = strings.ReplaceAll(yaml, "NAMESPACE_PLACEHOLDER", namespace)
 		return yaml
 	}
 
@@ -69,7 +64,6 @@ func Uninstall(ctx context.Context, dynamicClient dynamic.Interface, namespace s
 		replaceNamespace(manifests.DaemonSetHostYAML),
 		replaceNamespace(manifests.ConfigMapYAML),
 		replaceNamespace(manifests.RBACYAML),
-		replaceNamespace(manifests.NamespaceYAML),
 	}
 
 	for _, manifest := range manifestList {
@@ -159,6 +153,33 @@ func deleteYAML(ctx context.Context, dynamicClient dynamic.Interface, yamlConten
 	}
 
 	return nil
+}
+
+// GetAllManifests returns all manifests as a single YAML string with namespace and image substitutions applied.
+// This is useful for templating manifests to stdout so users can modify them before applying.
+func GetAllManifests(namespace, imageOverride string) string {
+	replaceNamespace := func(yaml string) string {
+		yaml = strings.ReplaceAll(yaml, "namespace: netdebug", "namespace: "+namespace)
+		yaml = strings.ReplaceAll(yaml, "NAMESPACE_PLACEHOLDER", namespace)
+		return yaml
+	}
+
+	rbacYAML := replaceNamespace(manifests.RBACYAML)
+	configMapYAML := replaceNamespace(manifests.ConfigMapYAML)
+	hostDS := replaceNamespace(manifests.DaemonSetHostYAML)
+	overlayDS := replaceNamespace(manifests.DaemonSetOverlayYAML)
+
+	if imageOverride != "" {
+		hostDS = strings.ReplaceAll(hostDS, "ghcr.io/ryanelliottsmith/network-debugger:latest", imageOverride)
+		overlayDS = strings.ReplaceAll(overlayDS, "ghcr.io/ryanelliottsmith/network-debugger:latest", imageOverride)
+	}
+
+	return strings.Join([]string{
+		rbacYAML,
+		configMapYAML,
+		hostDS,
+		overlayDS,
+	}, "---\n")
 }
 
 func getResourceName(kind string) string {
