@@ -17,7 +17,7 @@ import (
 func Install(ctx context.Context, clientset *kubernetes.Clientset, dynamicClient dynamic.Interface, namespace, imageOverride string) error {
 	// Replace namespace in all manifests
 	replaceNamespace := func(yaml string) string {
-		yaml = strings.ReplaceAll(yaml, "namespace: netdebug", "namespace: "+namespace)
+		yaml = strings.ReplaceAll(yaml, "namespace: default", "namespace: "+namespace)
 		yaml = strings.ReplaceAll(yaml, "NAMESPACE_PLACEHOLDER", namespace)
 		return yaml
 	}
@@ -54,7 +54,7 @@ func Install(ctx context.Context, clientset *kubernetes.Clientset, dynamicClient
 func Uninstall(ctx context.Context, dynamicClient dynamic.Interface, namespace string) error {
 	// Replace namespace in all manifests
 	replaceNamespace := func(yaml string) string {
-		yaml = strings.ReplaceAll(yaml, "namespace: netdebug", "namespace: "+namespace)
+		yaml = strings.ReplaceAll(yaml, "namespace: default", "namespace: "+namespace)
 		yaml = strings.ReplaceAll(yaml, "NAMESPACE_PLACEHOLDER", namespace)
 		return yaml
 	}
@@ -159,7 +159,7 @@ func deleteYAML(ctx context.Context, dynamicClient dynamic.Interface, yamlConten
 // This is useful for templating manifests to stdout so users can modify them before applying.
 func GetAllManifests(namespace, imageOverride string) string {
 	replaceNamespace := func(yaml string) string {
-		yaml = strings.ReplaceAll(yaml, "namespace: netdebug", "namespace: "+namespace)
+		yaml = strings.ReplaceAll(yaml, "namespace: default", "namespace: "+namespace)
 		yaml = strings.ReplaceAll(yaml, "NAMESPACE_PLACEHOLDER", namespace)
 		return yaml
 	}

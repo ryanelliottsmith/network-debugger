@@ -30,7 +30,7 @@ func init() {
 	runCmd.Flags().Bool("no-host-network", false, "Disable host network testing")
 	runCmd.Flags().Bool("no-overlay", false, "Disable overlay network testing")
 	runCmd.Flags().StringSlice("ports", []string{}, "Override default port list (format: 8080/tcp:name,9000/udp:name)")
-	runCmd.Flags().StringP("namespace", "n", "netdebug", "Namespace for DaemonSet deployment")
+	runCmd.Flags().StringP("namespace", "n", "default", "Namespace for DaemonSet deployment")
 	runCmd.Flags().Duration("timeout", 5*time.Minute, "Overall timeout (0 = no timeout)")
 	runCmd.Flags().Bool("cleanup", false, "Remove DaemonSet after test completion")
 	runCmd.Flags().Bool("tui", false, "Enable TUI dashboard (not yet implemented)")

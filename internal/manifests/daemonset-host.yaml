@@ -2,7 +2,7 @@ apiVersion: apps/v1
 kind: DaemonSet
 metadata:
   name: netdebug-host
-  namespace: netdebug
+  namespace: default
   labels:
     app: netdebug
     network-mode: host

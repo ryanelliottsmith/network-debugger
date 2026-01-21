@@ -2,7 +2,7 @@ apiVersion: apps/v1
 kind: DaemonSet
 metadata:
   name: netdebug-overlay
-  namespace: netdebug
+  namespace: default
   labels:
     app: netdebug
     network-mode: overlay

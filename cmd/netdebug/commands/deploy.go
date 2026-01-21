@@ -165,7 +165,7 @@ func init() {
 	deployCmd.AddCommand(deployTemplateCmd)
 
 	for _, cmd := range []*cobra.Command{deployInstallCmd, deployUninstallCmd, deployStatusCmd, deployTemplateCmd} {
-		cmd.Flags().StringP("namespace", "n", "netdebug", "Namespace for deployment")
+		cmd.Flags().StringP("namespace", "n", "default", "Namespace for deployment")
 	}
 
 	deployInstallCmd.Flags().String("image", "", "Override default image (default: ghcr.io/ryanelliottsmith/network-debugger:"+version+")")
