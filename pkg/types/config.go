@@ -3,9 +3,10 @@ package types
 import "time"
 
 type TargetNode struct {
-	NodeName string `json:"node_name"`
-	PodName  string `json:"pod_name,omitempty"`
-	IP       string `json:"ip"` // Target IP (CLI decides if this is pod IP or host IP)
+	NodeName       string `json:"node_name"`
+	PodName        string `json:"pod_name,omitempty"`
+	IP             string `json:"ip"`              // Target IP (CLI decides if this is pod IP or host IP)
+	IsControlPlane bool   `json:"is_controlplane"` // Whether this node is a control plane node
 }
 
 type BandwidthTest struct {

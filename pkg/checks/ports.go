@@ -20,20 +20,16 @@ func (c *PortsCheck) Name() string {
 
 func (c *PortsCheck) Run(ctx context.Context, target string) (*types.TestResult, error) {
 	result := &types.TestResult{
-		Check:  c.Name(),
-		Target: target,
-		Status: types.StatusPass,
-	}
-
-	ports := c.Ports
-	if len(ports) == 0 {
-		ports = types.DefaultPorts()
+		Check:   c.Name(),
+		Target:  target,
+		Status:  types.StatusPass,
+		Details: make(map[string]interface{}),
 	}
 
 	var portResults []types.PortCheckDetails
 	var failedPorts []string
 
-	for _, port := range ports {
+	for _, port := range c.Ports {
 		portResult := c.checkPort(ctx, target, port)
 		portResults = append(portResults, portResult)
 
@@ -42,9 +38,6 @@ func (c *PortsCheck) Run(ctx context.Context, target string) (*types.TestResult,
 		}
 	}
 
-	if result.Details == nil {
-		result.Details = make(map[string]interface{})
-	}
 	result.Details["ports"] = portResults
 
 	if len(failedPorts) > 0 {

@@ -86,7 +86,8 @@ podman-build-push:
 	--platform linux/amd64,linux/arm64 \
 	--manifest=$(IMAGE_NAME):$(IMAGE_TAG) \
 	. && \
-	podman manifest push $(IMAGE_NAME):$(IMAGE_TAG) 
+	podman manifest push $(IMAGE_NAME):$(IMAGE_TAG) \
+        && echo $(IMAGE_NAME):$(IMAGE_TAG)
 
 .PHONY: all
 all: fmt vet lint test build

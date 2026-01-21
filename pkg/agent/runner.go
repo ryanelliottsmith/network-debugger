@@ -74,7 +74,28 @@ func isLocalOnlyCheck(checkName string) bool {
 
 func runCheckAgainstAllTargets(ctx context.Context, checkName string, targets []types.TargetNode, config *types.Config, self *SelfInfo) {
 	for _, target := range targets {
-		runSingleCheck(ctx, checkName, target.IP, target.NodeName, config, self)
+		if checkName == "ports" {
+			runPortCheck(ctx, target, config, self)
+		} else {
+			runSingleCheck(ctx, checkName, target.IP, target.NodeName, config, self)
+		}
+	}
+}
+
+func runPortCheck(ctx context.Context, target types.TargetNode, config *types.Config, self *SelfInfo) {
+	if err := EmitTestStart(self, "ports", target.NodeName, config.RunID); err != nil {
+		log.Printf("Failed to emit test start: %v", err)
+	}
+
+	// Filter ports based on the target node's role
+	portsForTarget := types.FilterPortsForRole(config.Ports, target.IsControlPlane)
+
+	check := checks.NewPortsCheck(portsForTarget)
+	result := checks.RunWithTimeout(check, target.IP, checks.DefaultCheckTimeout)
+	result.Node = self.NodeName
+
+	if err := EmitTestResult(self, result, config.RunID); err != nil {
+		log.Printf("Failed to emit test result: %v", err)
 	}
 }
 

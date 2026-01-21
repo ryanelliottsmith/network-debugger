@@ -3,10 +3,9 @@ package checks
 import (
 	"context"
 	"fmt"
-	"os/exec"
-	"regexp"
-	"strconv"
+	"time"
 
+	probing "github.com/prometheus-community/pro-bing"
 	"github.com/ryanelliottsmith/network-debugger/pkg/types"
 )
 
@@ -33,20 +32,34 @@ func (c *PingCheck) Run(ctx context.Context, target string) (*types.TestResult, 
 		count = DefaultPingCount
 	}
 
-	cmd := exec.CommandContext(ctx, "ping", "-c", strconv.Itoa(count), "-W", "1", target)
-	output, err := cmd.CombinedOutput()
-
+	pinger, err := probing.NewPinger(target)
 	if err != nil {
+		result.Status = types.StatusFail
+		result.Error = fmt.Sprintf("failed to create pinger: %v", err)
+		return result, nil
+	}
+
+	// Use privileged mode (raw ICMP sockets) - requires CAP_NET_RAW
+	pinger.SetPrivileged(true)
+	pinger.Count = count
+	pinger.Timeout = time.Duration(count) * time.Second
+	pinger.Interval = 200 * time.Millisecond
+
+	if err := pinger.RunWithContext(ctx); err != nil {
 		result.Status = types.StatusFail
 		result.Error = fmt.Sprintf("ping failed: %v", err)
 		return result, nil
 	}
 
-	details, parseErr := c.parsePingOutput(string(output))
-	if parseErr != nil {
-		result.Status = types.StatusFail
-		result.Error = fmt.Sprintf("failed to parse ping output: %v", parseErr)
-		return result, nil
+	stats := pinger.Statistics()
+
+	details := types.PingCheckDetails{
+		PacketsSent:     stats.PacketsSent,
+		PacketsReceived: stats.PacketsRecv,
+		PacketLoss:      stats.PacketLoss,
+		MinLatencyMS:    float64(stats.MinRtt.Microseconds()) / 1000.0,
+		AvgLatencyMS:    float64(stats.AvgRtt.Microseconds()) / 1000.0,
+		MaxLatencyMS:    float64(stats.MaxRtt.Microseconds()) / 1000.0,
 	}
 
 	if details.PacketLoss > 0 {
@@ -60,59 +73,6 @@ func (c *PingCheck) Run(ctx context.Context, target string) (*types.TestResult, 
 	result.Details["ping"] = details
 
 	return result, nil
-}
-
-func (c *PingCheck) parsePingOutput(output string) (types.PingCheckDetails, error) {
-	details := types.PingCheckDetails{}
-
-	statsRe := regexp.MustCompile(`(\d+) packets transmitted, (\d+) received, ([\d.]+)% packet loss`)
-	matches := statsRe.FindStringSubmatch(output)
-	if len(matches) >= 4 {
-		sent, _ := strconv.Atoi(matches[1])
-		received, _ := strconv.Atoi(matches[2])
-		loss, _ := strconv.ParseFloat(matches[3], 64)
-
-		details.PacketsSent = sent
-		details.PacketsReceived = received
-		details.PacketLoss = loss
-	}
-
-	rttRe := regexp.MustCompile(`rtt min/avg/max/mdev = ([\d.]+)/([\d.]+)/([\d.]+)/([\d.]+) ms`)
-	matches = rttRe.FindStringSubmatch(output)
-	if len(matches) >= 4 {
-		details.MinLatencyMS, _ = strconv.ParseFloat(matches[1], 64)
-		details.AvgLatencyMS, _ = strconv.ParseFloat(matches[2], 64)
-		details.MaxLatencyMS, _ = strconv.ParseFloat(matches[3], 64)
-	} else {
-		responseRe := regexp.MustCompile(`time=([\d.]+) ms`)
-		responseMatches := responseRe.FindAllStringSubmatch(output, -1)
-		if len(responseMatches) > 0 {
-			var sum float64
-			var min, max float64
-			min = 999999.0
-
-			for _, match := range responseMatches {
-				if len(match) >= 2 {
-					latency, _ := strconv.ParseFloat(match[1], 64)
-					sum += latency
-					if latency < min {
-						min = latency
-					}
-					if latency > max {
-						max = latency
-					}
-				}
-			}
-
-			if len(responseMatches) > 0 {
-				details.MinLatencyMS = min
-				details.AvgLatencyMS = sum / float64(len(responseMatches))
-				details.MaxLatencyMS = max
-			}
-		}
-	}
-
-	return details, nil
 }
 
 func NewPingCheck(count int) *PingCheck {

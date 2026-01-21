@@ -23,7 +23,6 @@ RUN CGO_ENABLED=0 GOOS=${TARGETOS} GOARCH=${TARGETARCH} go build \
 FROM debian:bookworm-slim
 
 RUN apt-get update && apt-get install -y --no-install-recommends \
-    iputils-ping \
     dnsutils \
     curl \
     iperf3 \
@@ -35,6 +34,9 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     && rm -rf /var/lib/apt/lists/*
 
 COPY --from=builder /build/netdebug /usr/local/bin/netdebug
+
+# Grant CAP_NET_RAW to allow raw ICMP sockets when running as non-root
+RUN setcap cap_net_raw=+ep /usr/local/bin/netdebug
 
 RUN useradd -r -u 1000 -g root netdebug
 

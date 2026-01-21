@@ -158,7 +158,8 @@ func runTests(cmd *cobra.Command, args []string) error {
 
 		if overlay {
 			fmt.Println("\n--- Overlay Network Tests ---")
-			events, err := runStandardTests(ctx, coord, overlayTargets, overlayPods, checksWithoutBandwidth, timeout, debug, false)
+			overlayChecks := filterOutCheck(checksWithoutBandwidth, "ports")
+			events, err := runStandardTests(ctx, coord, overlayTargets, overlayPods, overlayChecks, timeout, debug, false)
 			if err != nil {
 				fmt.Printf("Warning: overlay network tests failed: %v\n", err)
 			}
@@ -304,6 +305,16 @@ func filterClusterLocalNames(names []string) []string {
 	for _, name := range names {
 		if !strings.HasSuffix(name, ".cluster.local") {
 			filtered = append(filtered, name)
+		}
+	}
+	return filtered
+}
+
+func filterOutCheck(checks []string, checkToRemove string) []string {
+	var filtered []string
+	for _, check := range checks {
+		if check != checkToRemove {
+			filtered = append(filtered, check)
 		}
 	}
 	return filtered

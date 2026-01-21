@@ -19,9 +19,10 @@ func GetHostIPsForPods(ctx context.Context, clientset *kubernetes.Clientset, nam
 		}
 
 		targets = append(targets, types.TargetNode{
-			NodeName: pod.NodeName,
-			PodName:  pod.PodName,
-			IP:       podObj.Status.HostIP,
+			NodeName:       pod.NodeName,
+			PodName:        pod.PodName,
+			IP:             podObj.Status.HostIP,
+			IsControlPlane: pod.IsControlPlane, // Preserve control plane status from discovery
 		})
 	}
 

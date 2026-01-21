@@ -20,6 +20,12 @@ func DiscoverDaemonSetPods(ctx context.Context, clientset *kubernetes.Clientset,
 		return nil, fmt.Errorf("failed to list pods: %w", err)
 	}
 
+	// Get node roles for all nodes upfront (more efficient than per-node queries)
+	nodeRoles, err := GetNodeRoles(ctx, clientset)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get node roles: %w", err)
+	}
+
 	var targets []types.TargetNode
 	for _, pod := range pods.Items {
 		if pod.Status.Phase != "Running" {
@@ -39,9 +45,10 @@ func DiscoverDaemonSetPods(ctx context.Context, clientset *kubernetes.Clientset,
 		}
 
 		targets = append(targets, types.TargetNode{
-			NodeName: pod.Spec.NodeName,
-			PodName:  pod.Name,
-			IP:       pod.Status.PodIP,
+			NodeName:       pod.Spec.NodeName,
+			PodName:        pod.Name,
+			IP:             pod.Status.PodIP,
+			IsControlPlane: nodeRoles[pod.Spec.NodeName],
 		})
 	}
 
