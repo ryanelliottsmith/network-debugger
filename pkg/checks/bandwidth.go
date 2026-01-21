@@ -6,17 +6,13 @@ import (
 	"fmt"
 	"log"
 	"os/exec"
-	"strings"
-	"time"
 
 	"github.com/ryanelliottsmith/network-debugger/pkg/types"
 )
 
 const BandwidthDuration = 10
 
-type BandwidthCheck struct {
-	Debug bool
-}
+type BandwidthCheck struct{}
 
 func (c *BandwidthCheck) Name() string {
 	return "bandwidth"
@@ -29,62 +25,28 @@ func (c *BandwidthCheck) Run(ctx context.Context, target string) (*types.TestRes
 		Status: types.StatusPass,
 	}
 
-	const maxRetries = 3
-	const retryDelay = 5 * time.Second
-
-	var lastErr error
-	for attempt := 1; attempt <= maxRetries; attempt++ {
-		details, err := c.runIperf3(ctx, target, attempt)
-		if err == nil {
-			if c.Debug {
-				log.Printf("[bandwidth] Result: %.2f Mbps, %d retransmits", details.BandwidthMbps, details.Retransmits)
-			}
-			if result.Details == nil {
-				result.Details = make(map[string]interface{})
-			}
-			result.Details["bandwidth"] = details
-			return result, nil
-		}
-
-		lastErr = err
-
-		if strings.Contains(err.Error(), "server is busy") && attempt < maxRetries {
-			if c.Debug {
-				log.Printf("[bandwidth] Server busy, waiting %v before retry %d/%d", retryDelay, attempt+1, maxRetries)
-			}
-			select {
-			case <-time.After(retryDelay):
-			case <-ctx.Done():
-				result.Status = types.StatusFail
-				result.Error = fmt.Sprintf("cancelled while waiting to retry: %v", ctx.Err())
-				return result, nil
-			}
-			continue
-		}
-
-		break
+	details, err := c.runIperf3(ctx, target)
+	if err != nil {
+		result.Status = types.StatusFail
+		result.Error = err.Error()
+		log.Printf("[bandwidth] Failed: %v", err)
+		return result, nil
 	}
 
-	result.Status = types.StatusFail
-	result.Error = lastErr.Error()
-	if c.Debug {
-		log.Printf("[bandwidth] Failed after %d attempts: %v", maxRetries, lastErr)
-	}
+	log.Printf("[bandwidth] Result: %.2f Mbps, %d retransmits", details.BandwidthMbps, details.Retransmits)
+	result.Details = make(map[string]interface{})
+	result.Details["bandwidth"] = details
 	return result, nil
 }
 
-func (c *BandwidthCheck) runIperf3(ctx context.Context, target string, attempt int) (types.BandwidthCheckDetails, error) {
-	if c.Debug {
-		log.Printf("[bandwidth] Starting iperf3 test to %s for %d seconds (attempt %d)", target, BandwidthDuration, attempt)
-	}
+func (c *BandwidthCheck) runIperf3(ctx context.Context, target string) (types.BandwidthCheckDetails, error) {
+	log.Printf("[bandwidth] Starting iperf3 test to %s for %d seconds", target, BandwidthDuration)
 	cmd := exec.CommandContext(ctx, "iperf3", "-c", target, "-J", "-t", fmt.Sprintf("%d", BandwidthDuration))
 	output, err := cmd.CombinedOutput()
 
-	if c.Debug {
-		log.Printf("[bandwidth] iperf3 output length: %d bytes", len(output))
-		if len(output) > 0 {
-			log.Printf("[bandwidth] iperf3 raw output:\n%s", string(output))
-		}
+	log.Printf("[bandwidth] iperf3 output length: %d bytes", len(output))
+	if len(output) > 0 {
+		log.Printf("[bandwidth] iperf3 raw output:\n%s", string(output))
 	}
 
 	if err != nil {
@@ -135,8 +97,6 @@ func (c *BandwidthCheck) parseIperf3Output(output []byte) (types.BandwidthCheckD
 	return details, nil
 }
 
-func NewBandwidthCheck(debug bool) *BandwidthCheck {
-	return &BandwidthCheck{
-		Debug: debug,
-	}
+func NewBandwidthCheck() *BandwidthCheck {
+	return &BandwidthCheck{}
 }

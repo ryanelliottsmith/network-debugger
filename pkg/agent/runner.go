@@ -37,7 +37,7 @@ func RunTests(ctx context.Context, config *types.Config, self *SelfInfo) error {
 
 	if config.BandwidthTest != nil && config.BandwidthTest.Active {
 		if config.BandwidthTest.SourcePod == self.PodName {
-			runBandwidthTest(ctx, config.BandwidthTest, self, config.RunID, config.Debug)
+			runBandwidthTest(ctx, config.BandwidthTest, self, config.RunID)
 		}
 	}
 
@@ -142,14 +142,14 @@ func runSingleCheck(ctx context.Context, checkName, targetIP, targetNode string,
 	}
 }
 
-func runBandwidthTest(ctx context.Context, test *types.BandwidthTest, self *SelfInfo, runID string, debug bool) {
+func runBandwidthTest(ctx context.Context, test *types.BandwidthTest, self *SelfInfo, runID string) {
 	log.Printf("Running bandwidth test to %s (%s)", test.TargetNode, test.TargetIP)
 
 	if err := EmitTestStart(self, "bandwidth", test.TargetNode, runID); err != nil {
 		log.Printf("Failed to emit test start: %v", err)
 	}
 
-	check := checks.NewBandwidthCheck(debug)
+	check := checks.NewBandwidthCheck()
 	result := checks.RunWithTimeout(check, test.TargetIP, time.Duration(checks.BandwidthDuration+5)*time.Second)
 	result.Node = self.NodeName
 	result.Target = test.TargetNode

@@ -91,8 +91,7 @@ var checkBandwidthCmd = &cobra.Command{
 			return fmt.Errorf("target required (use --target)")
 		}
 
-		debug, _ := cmd.Flags().GetBool("debug")
-		check := checks.NewBandwidthCheck(debug)
+		check := checks.NewBandwidthCheck()
 		result := checks.RunWithTimeout(check, target, time.Duration(checks.BandwidthDuration+5)*time.Second)
 
 		format, _ := cmd.Flags().GetString("output")

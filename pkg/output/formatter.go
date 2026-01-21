@@ -239,8 +239,8 @@ func printEventsTable(events []*types.Event, debug bool) error {
 			} else {
 				passed++
 			}
-			// Only include in display if failed OR debug mode
-			if event.Status == "fail" || debug {
+			// Only include in display if failed OR debug mode OR bandwidth (always show bandwidth results)
+			if event.Status == "fail" || debug || event.Check == "bandwidth" {
 				eventsByCheck[event.Check] = append(eventsByCheck[event.Check], event)
 			}
 		} else if event.Type == types.EventTypeError {
