@@ -162,6 +162,61 @@ func formatBandwidthMap(m map[string]interface{}) string {
 	return fmt.Sprintf("%.2f Mbps, %d retransmits", mbps, int(retransmits))
 }
 
+// formatPortsDetails extracts port check info from event details for display
+func formatPortsDetails(details interface{}, debug bool) string {
+	if details == nil {
+		return ""
+	}
+
+	detailsMap, ok := details.(map[string]interface{})
+	if !ok {
+		return ""
+	}
+
+	portsRaw, ok := detailsMap["ports"]
+	if !ok {
+		return ""
+	}
+
+	portsList, ok := portsRaw.([]interface{})
+	if !ok {
+		return ""
+	}
+
+	var open, total int
+	var portDetails []string
+
+	for _, p := range portsList {
+		portMap, ok := p.(map[string]interface{})
+		if !ok {
+			continue
+		}
+		total++
+
+		port := int(portMap["port"].(float64))
+		protocol := portMap["protocol"].(string)
+		isOpen, _ := portMap["open"].(bool)
+
+		if isOpen {
+			open++
+			if debug {
+				latency, _ := portMap["latency_ms"].(float64)
+				portDetails = append(portDetails, fmt.Sprintf("%d/%s: %.2fms", port, protocol, latency))
+			}
+		} else {
+			if debug {
+				portDetails = append(portDetails, fmt.Sprintf("%d/%s: CLOSED", port, protocol))
+			}
+		}
+	}
+
+	summary := fmt.Sprintf("%d/%d open", open, total)
+	if debug && len(portDetails) > 0 {
+		return summary + " | " + strings.Join(portDetails, ", ")
+	}
+	return summary
+}
+
 func printEventsTable(events []*types.Event, debug bool) error {
 	if len(events) == 0 {
 		fmt.Println("No test results collected.")
@@ -255,10 +310,19 @@ func printEventsTable(events []*types.Event, debug bool) error {
 				}
 
 				details := ""
-				if event.Error != "" {
-					details = event.Error
-				} else if check == "bandwidth" {
+				switch check {
+				case "bandwidth":
 					details = formatBandwidthDetails(event.Details)
+				case "ports":
+					details = formatPortsDetails(event.Details, debug)
+				}
+
+				if event.Error != "" {
+					if details != "" {
+						details = details + " | " + event.Error
+					} else {
+						details = event.Error
+					}
 				}
 
 				fmt.Printf("%-20s %-20s %-10s %s\n", node, target, status, details)
