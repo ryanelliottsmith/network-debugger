@@ -1,5 +1,3 @@
-- port-connectivity tests need to run on host-network only, and the agent should attempt to bind to all ports(and silently continue if something is already listening on that port)
-- connectivity and bandwidth tests should show the host name in brackets next to the target IP, so that IPs(both pod and hostNetwork IPs) can be easily linked to a host
 - Add ability to export daemonsets to file, so that users can add customizations(node selector, etc)
 - Implement standalone mode:
   - Standalone mode should allow the image to be run on one node(with something like docker run, kubectl run)
@@ -10,5 +8,5 @@
   - move all check specific logic so that it resides only within the check .go file
   - reduce complexity of logic, remove all redundant code
   - Test results shouldn't have their own separate output logic, make the output logic generic
-  
+- Fix multiarch builds for external binaries(iperf etc)  
  
