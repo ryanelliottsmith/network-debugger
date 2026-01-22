@@ -2,9 +2,6 @@ package manifests
 
 import _ "embed"
 
-//go:embed namespace.yaml
-var NamespaceYAML string
-
 //go:embed rbac.yaml
 var RBACYAML string
 

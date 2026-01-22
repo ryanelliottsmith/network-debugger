@@ -185,8 +185,6 @@ func GetAllManifests(namespace, imageOverride string) string {
 func getResourceName(kind string) string {
 	kind = strings.ToLower(kind)
 	switch kind {
-	case "namespace":
-		return "namespaces"
 	case "serviceaccount":
 		return "serviceaccounts"
 	case "clusterrole":
