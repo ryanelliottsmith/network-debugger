@@ -59,7 +59,7 @@ func runTests(cmd *cobra.Command, args []string) error {
 	}
 
 	if !hostNetwork && !overlay {
-		return fmt.Errorf("at least one network mode must be enabled (--host-network or --overlay)")
+		return fmt.Errorf("at least one network mode must be enabled (not both --no-host-network or --no-overlay)")
 	}
 
 	bandwidthRequested := false
@@ -72,7 +72,7 @@ func runTests(cmd *cobra.Command, args []string) error {
 		}
 	}
 
-	fmt.Println("🚀 Starting network tests...")
+	fmt.Println("Starting network tests...")
 	fmt.Printf("Network modes: host=%v overlay=%v\n", hostNetwork, overlay)
 	fmt.Printf("Checks: %s\n", strings.Join(checks, ", "))
 	fmt.Println()
@@ -87,7 +87,7 @@ func runTests(cmd *cobra.Command, args []string) error {
 		return fmt.Errorf("failed to create dynamic client: %w", err)
 	}
 
-	fmt.Println("📦 Checking DaemonSet deployment...")
+	fmt.Println("Checking DaemonSet deployment...")
 	_, err = clientset.AppsV1().DaemonSets(namespace).Get(ctx, "netdebug-host", metav1.GetOptions{})
 	needsDeployment := err != nil
 

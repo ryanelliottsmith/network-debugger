@@ -13,7 +13,6 @@ var (
 	buildDate string
 )
 
-// SetVersionInfo sets the version information for the CLI
 func SetVersionInfo(v, c, b string) {
 	version = v
 	commit = c
@@ -27,7 +26,6 @@ var rootCmd = &cobra.Command{
 Helps diagnose connectivity issues, DNS problems, port accessibility, and more.`,
 }
 
-// Execute runs the root command
 func Execute() error {
 	return rootCmd.Execute()
 }
