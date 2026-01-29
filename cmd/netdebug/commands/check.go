@@ -13,7 +13,7 @@ import (
 var checkCmd = &cobra.Command{
 	Use:   "check",
 	Short: "Run standalone local checks",
-	Long:  "Run individual network checks locally without DaemonSet coordination.",
+	Long:  "WIP: Run individual network checks locally without DaemonSet coordination.",
 }
 
 var checkDNSCmd = &cobra.Command{
