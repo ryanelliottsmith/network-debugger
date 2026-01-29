@@ -21,7 +21,7 @@ spec:
       serviceAccountName: netdebug
       containers:
       - name: netdebug
-        image: ghcr.io/ryanelliottsmith/network-debugger:latest
+        image: ghcr.io/ryanelliottsmith/network-debugger:dev
         command: ["netdebug"]
         args:
         - agent
