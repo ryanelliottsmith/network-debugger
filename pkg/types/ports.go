@@ -22,7 +22,6 @@ func DefaultPorts() []PortCheck {
 	return []PortCheck{
 
 		{Port: 10250, Protocol: "tcp", Name: "kubelet", NodeRole: NodeRoleAll},
-		{Port: 8472, Protocol: "udp", Name: "rke2-cilium", NodeRole: NodeRoleAll},
 
 		{Port: 6443, Protocol: "tcp", Name: "kube-apiserver", NodeRole: NodeRoleControlPlane},
 		{Port: 9345, Protocol: "tcp", Name: "rke2-supervisor", NodeRole: NodeRoleControlPlane},
