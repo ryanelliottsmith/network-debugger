@@ -8,5 +8,3 @@
   - move all check specific logic so that it resides only within the check .go file
   - reduce complexity of logic, remove all redundant code
   - Test results shouldn't have their own separate output logic, make the output logic generic
-- Fix multiarch builds for external binaries(iperf etc)  
- 
