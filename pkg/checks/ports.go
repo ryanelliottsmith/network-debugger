@@ -88,6 +88,68 @@ func (c *PortsCheck) checkPort(ctx context.Context, host string, port types.Port
 	return details
 }
 
+func (c *PortsCheck) IsLocal() bool {
+	return false
+}
+
+func (c *PortsCheck) AlwaysShow() bool {
+	return false
+}
+
+func (c *PortsCheck) FormatSummary(details interface{}, debug bool) string {
+	if details == nil {
+		return ""
+	}
+
+	detailsMap, ok := details.(map[string]interface{})
+	if !ok {
+		return ""
+	}
+
+	portsRaw, ok := detailsMap["ports"]
+	if !ok {
+		return ""
+	}
+
+	portsList, ok := portsRaw.([]interface{})
+	if !ok {
+		return ""
+	}
+
+	var open, total int
+	var portDetails []string
+
+	for _, p := range portsList {
+		portMap, ok := p.(map[string]interface{})
+		if !ok {
+			continue
+		}
+		total++
+
+		port := int(portMap["port"].(float64))
+		protocol := portMap["protocol"].(string)
+		isOpen, _ := portMap["open"].(bool)
+
+		if isOpen {
+			open++
+			if debug {
+				latency, _ := portMap["latency_ms"].(float64)
+				portDetails = append(portDetails, fmt.Sprintf("%d/%s: %.2fms", port, protocol, latency))
+			}
+		} else {
+			if debug {
+				portDetails = append(portDetails, fmt.Sprintf("%d/%s: CLOSED", port, protocol))
+			}
+		}
+	}
+
+	summary := fmt.Sprintf("%d/%d open", open, total)
+	if debug && len(portDetails) > 0 {
+		return summary + " | " + strings.Join(portDetails, ", ")
+	}
+	return summary
+}
+
 func NewPortsCheck(ports []types.PortCheck) *PortsCheck {
 	if len(ports) == 0 {
 		ports = types.DefaultPorts()
@@ -95,4 +157,8 @@ func NewPortsCheck(ports []types.PortCheck) *PortsCheck {
 	return &PortsCheck{
 		Ports: ports,
 	}
+}
+
+func init() {
+	DefaultRegistry.Register(NewPortsCheck(nil))
 }

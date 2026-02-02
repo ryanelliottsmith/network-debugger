@@ -75,6 +75,45 @@ func (c *PingCheck) Run(ctx context.Context, target string) (*types.TestResult, 
 	return result, nil
 }
 
+func (c *PingCheck) IsLocal() bool {
+	return false
+}
+
+func (c *PingCheck) AlwaysShow() bool {
+	return false
+}
+
+func (c *PingCheck) FormatSummary(details interface{}, debug bool) string {
+	if details == nil {
+		return ""
+	}
+
+	// Details can be a map or struct depending on how it was serialized
+	switch d := details.(type) {
+	case map[string]interface{}:
+		// Check for nested "ping" key (as stored in TestResult.Details)
+		if ping, ok := d["ping"]; ok {
+			if pingMap, ok := ping.(map[string]interface{}); ok {
+				return formatPingMap(pingMap)
+			}
+		}
+		// Try direct format
+		return formatPingMap(d)
+	}
+
+	return ""
+}
+
+func formatPingMap(m map[string]interface{}) string {
+	packetsSent, _ := m["packets_sent"].(float64)
+	packetsReceived, _ := m["packets_received"].(float64)
+	packetLoss, _ := m["packet_loss_percent"].(float64)
+	avgLatency, _ := m["avg_latency_ms"].(float64)
+
+	return fmt.Sprintf("%.0f sent, %.0f received, %.1f%% loss, avg %.2fms",
+		packetsSent, packetsReceived, packetLoss, avgLatency)
+}
+
 func NewPingCheck(count int) *PingCheck {
 	if count == 0 {
 		count = DefaultPingCount
@@ -82,4 +121,8 @@ func NewPingCheck(count int) *PingCheck {
 	return &PingCheck{
 		Count: count,
 	}
+}
+
+func init() {
+	DefaultRegistry.Register(NewPingCheck(0))
 }

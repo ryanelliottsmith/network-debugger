@@ -98,6 +98,65 @@ func (c *HostConfigCheck) getMTU(ctx context.Context) (int, error) {
 	return 0, fmt.Errorf("could not find MTU in ip link output")
 }
 
+func (c *HostConfigCheck) IsLocal() bool {
+	return true
+}
+
+func (c *HostConfigCheck) AlwaysShow() bool {
+	return false
+}
+
+func (c *HostConfigCheck) FormatSummary(details interface{}, debug bool) string {
+	if details == nil {
+		return ""
+	}
+
+	detailsMap, ok := details.(map[string]interface{})
+	if !ok {
+		return ""
+	}
+
+	hostconfigRaw, ok := detailsMap["hostconfig"]
+	if !ok {
+		return ""
+	}
+
+	hostconfigMap, ok := hostconfigRaw.(map[string]interface{})
+	if !ok {
+		return ""
+	}
+
+	// Get issues if present
+	issuesRaw, hasIssues := hostconfigMap["issues"]
+	if hasIssues {
+		if issues, ok := issuesRaw.([]interface{}); ok {
+			issueCount := len(issues)
+			if issueCount > 0 {
+				return fmt.Sprintf("%d configuration issues", issueCount)
+			}
+		}
+	}
+
+	// No issues, show basic info
+	ipForwarding, _ := hostconfigMap["ip_forwarding"].(bool)
+	mtu, _ := hostconfigMap["mtu"].(float64)
+
+	forwardingStr := "disabled"
+	if ipForwarding {
+		forwardingStr = "enabled"
+	}
+
+	if debug {
+		return fmt.Sprintf("IP forwarding %s, MTU %d", forwardingStr, int(mtu))
+	}
+
+	return "OK"
+}
+
 func NewHostConfigCheck() *HostConfigCheck {
 	return &HostConfigCheck{}
+}
+
+func init() {
+	DefaultRegistry.Register(NewHostConfigCheck())
 }

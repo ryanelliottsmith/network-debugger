@@ -118,6 +118,59 @@ func (c *ConntrackCheck) readConntrackStats() (map[string]int, error) {
 	return stats, nil
 }
 
+func (c *ConntrackCheck) IsLocal() bool {
+	return true
+}
+
+func (c *ConntrackCheck) AlwaysShow() bool {
+	return false
+}
+
+func (c *ConntrackCheck) FormatSummary(details interface{}, debug bool) string {
+	if details == nil {
+		return ""
+	}
+
+	detailsMap, ok := details.(map[string]interface{})
+	if !ok {
+		return ""
+	}
+
+	conntrackRaw, ok := detailsMap["conntrack"]
+	if !ok {
+		return ""
+	}
+
+	conntrackMap, ok := conntrackRaw.(map[string]interface{})
+	if !ok {
+		return ""
+	}
+
+	// Get issues if present
+	issuesRaw, hasIssues := conntrackMap["issues"]
+	if hasIssues {
+		if issues, ok := issuesRaw.([]interface{}); ok && len(issues) > 0 {
+			return fmt.Sprintf("%d issues", len(issues))
+		}
+	}
+
+	entries, _ := conntrackMap["entries"].(float64)
+	maxEntries, _ := conntrackMap["max_entries"].(float64)
+
+	if maxEntries > 0 {
+		utilization := entries / maxEntries * 100.0
+		return fmt.Sprintf("%.0f/%.0f entries (%.1f%%)", entries, maxEntries, utilization)
+	} else if entries > 0 {
+		return fmt.Sprintf("%.0f entries", entries)
+	}
+
+	return "OK"
+}
+
 func NewConntrackCheck() *ConntrackCheck {
 	return &ConntrackCheck{}
+}
+
+func init() {
+	DefaultRegistry.Register(NewConntrackCheck())
 }

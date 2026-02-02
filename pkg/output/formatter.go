@@ -7,6 +7,7 @@ import (
 	"sort"
 	"strings"
 
+	"github.com/ryanelliottsmith/network-debugger/pkg/checks"
 	"github.com/ryanelliottsmith/network-debugger/pkg/types"
 	"gopkg.in/yaml.v3"
 )
@@ -118,105 +119,6 @@ func FormatEvents(events []*types.Event, format string, debug bool) error {
 	}
 }
 
-// isLocalCheck returns true for checks that run locally and don't have a meaningful target
-func isLocalCheck(check string) bool {
-	switch check {
-	case "conntrack", "hostconfig", "iptables":
-		return true
-	default:
-		return false
-	}
-}
-
-// formatBandwidthDetails extracts bandwidth info from event details for display
-func formatBandwidthDetails(details interface{}) string {
-	if details == nil {
-		return ""
-	}
-
-	// Details can be a map or struct depending on how it was serialized
-	switch d := details.(type) {
-	case map[string]interface{}:
-		// Check for nested "bandwidth" key (as stored in TestResult.Details)
-		if bw, ok := d["bandwidth"]; ok {
-			if bwMap, ok := bw.(map[string]interface{}); ok {
-				return formatBandwidthMap(bwMap)
-			}
-		}
-		// Try direct format
-		return formatBandwidthMap(d)
-	}
-	return ""
-}
-
-func formatBandwidthMap(m map[string]interface{}) string {
-	mbps, ok := m["bandwidth_mbps"].(float64)
-	if !ok {
-		return ""
-	}
-	retransmits, _ := m["retransmits"].(float64) // JSON numbers are float64
-
-	if mbps >= 1000 {
-		return fmt.Sprintf("%.2f Gbps, %d retransmits", mbps/1000, int(retransmits))
-	}
-	return fmt.Sprintf("%.2f Mbps, %d retransmits", mbps, int(retransmits))
-}
-
-// formatPortsDetails extracts port check info from event details for display
-func formatPortsDetails(details interface{}, debug bool) string {
-	if details == nil {
-		return ""
-	}
-
-	detailsMap, ok := details.(map[string]interface{})
-	if !ok {
-		return ""
-	}
-
-	portsRaw, ok := detailsMap["ports"]
-	if !ok {
-		return ""
-	}
-
-	portsList, ok := portsRaw.([]interface{})
-	if !ok {
-		return ""
-	}
-
-	var open, total int
-	var portDetails []string
-
-	for _, p := range portsList {
-		portMap, ok := p.(map[string]interface{})
-		if !ok {
-			continue
-		}
-		total++
-
-		port := int(portMap["port"].(float64))
-		protocol := portMap["protocol"].(string)
-		isOpen, _ := portMap["open"].(bool)
-
-		if isOpen {
-			open++
-			if debug {
-				latency, _ := portMap["latency_ms"].(float64)
-				portDetails = append(portDetails, fmt.Sprintf("%d/%s: %.2fms", port, protocol, latency))
-			}
-		} else {
-			if debug {
-				portDetails = append(portDetails, fmt.Sprintf("%d/%s: CLOSED", port, protocol))
-			}
-		}
-	}
-
-	summary := fmt.Sprintf("%d/%d open", open, total)
-	if debug && len(portDetails) > 0 {
-		return summary + " | " + strings.Join(portDetails, ", ")
-	}
-	return summary
-}
-
 func printEventsTable(events []*types.Event, debug bool) error {
 	if len(events) == 0 {
 		fmt.Println("No test results collected.")
@@ -239,8 +141,13 @@ func printEventsTable(events []*types.Event, debug bool) error {
 			} else {
 				passed++
 			}
-			// Only include in display if failed OR debug mode OR bandwidth (always show bandwidth results)
-			if event.Status == "fail" || debug || event.Check == "bandwidth" {
+
+			// Check if this check should always show results
+			check := checks.DefaultRegistry.Get(event.Check)
+			alwaysShow := check != nil && check.AlwaysShow()
+
+			// Only include in display if failed OR debug mode OR check says always show
+			if event.Status == "fail" || debug || alwaysShow {
 				eventsByCheck[event.Check] = append(eventsByCheck[event.Check], event)
 			}
 		} else if event.Type == types.EventTypeError {
@@ -256,7 +163,11 @@ func printEventsTable(events []*types.Event, debug bool) error {
 			continue
 		}
 
-		// Sort bandwidth results by source node name
+		// Get check from registry to check if it's local
+		checkInstance := checks.DefaultRegistry.Get(check)
+		isLocal := checkInstance != nil && checkInstance.IsLocal()
+
+		// Special sorting for bandwidth - sort by source node name
 		if check == "bandwidth" {
 			sort.Slice(checkEvents, func(i, j int) bool {
 				return checkEvents[i].Node < checkEvents[j].Node
@@ -266,8 +177,6 @@ func printEventsTable(events []*types.Event, debug bool) error {
 		// Print check header
 		fmt.Printf("\n%s\n", strings.ToUpper(check))
 		fmt.Println(strings.Repeat("-", 60))
-
-		isLocal := isLocalCheck(check)
 
 		if isLocal {
 			// Local checks: Node, Status, Details
@@ -284,6 +193,9 @@ func printEventsTable(events []*types.Event, debug bool) error {
 				}
 
 				details := ""
+				if checkInstance != nil {
+					details = checkInstance.FormatSummary(event.Details, debug)
+				}
 				if event.Error != "" {
 					details = event.Error
 				}
@@ -310,11 +222,8 @@ func printEventsTable(events []*types.Event, debug bool) error {
 				}
 
 				details := ""
-				switch check {
-				case "bandwidth":
-					details = formatBandwidthDetails(event.Details)
-				case "ports":
-					details = formatPortsDetails(event.Details, debug)
+				if checkInstance != nil {
+					details = checkInstance.FormatSummary(event.Details, debug)
 				}
 
 				if event.Error != "" {
@@ -364,8 +273,17 @@ func printEventsTable(events []*types.Event, debug bool) error {
 			}
 
 			details := ""
+			checkInstance := checks.DefaultRegistry.Get(check)
+			if checkInstance != nil {
+				details = checkInstance.FormatSummary(event.Details, debug)
+			}
+
 			if event.Error != "" {
-				details = event.Error
+				if details != "" {
+					details = details + " | " + event.Error
+				} else {
+					details = event.Error
+				}
 			}
 
 			fmt.Printf("%-20s %-20s %-10s %s\n", node, target, status, details)

@@ -97,6 +97,52 @@ func (c *BandwidthCheck) parseIperf3Output(output []byte) (types.BandwidthCheckD
 	return details, nil
 }
 
+func (c *BandwidthCheck) IsLocal() bool {
+	return false
+}
+
+func (c *BandwidthCheck) AlwaysShow() bool {
+	return true
+}
+
+func (c *BandwidthCheck) FormatSummary(details interface{}, debug bool) string {
+	if details == nil {
+		return ""
+	}
+
+	// Details can be a map or struct depending on how it was serialized
+	switch d := details.(type) {
+	case map[string]interface{}:
+		// Check for nested "bandwidth" key (as stored in TestResult.Details)
+		if bw, ok := d["bandwidth"]; ok {
+			if bwMap, ok := bw.(map[string]interface{}); ok {
+				return formatBandwidthMap(bwMap)
+			}
+		}
+		// Try direct format
+		return formatBandwidthMap(d)
+	}
+
+	return ""
+}
+
+func formatBandwidthMap(m map[string]interface{}) string {
+	mbps, ok := m["bandwidth_mbps"].(float64)
+	if !ok {
+		return ""
+	}
+	retransmits, _ := m["retransmits"].(float64) // JSON numbers are float64
+
+	if mbps >= 1000 {
+		return fmt.Sprintf("%.2f Gbps, %d retransmits", mbps/1000, int(retransmits))
+	}
+	return fmt.Sprintf("%.2f Mbps, %d retransmits", mbps, int(retransmits))
+}
+
 func NewBandwidthCheck() *BandwidthCheck {
 	return &BandwidthCheck{}
+}
+
+func init() {
+	DefaultRegistry.Register(NewBandwidthCheck())
 }

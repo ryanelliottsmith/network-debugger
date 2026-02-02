@@ -101,6 +101,83 @@ func (c *DNSCheck) resolveWithTiming(ctx context.Context, name string) (types.DN
 	return details, nil
 }
 
+func (c *DNSCheck) IsLocal() bool {
+	return false
+}
+
+func (c *DNSCheck) AlwaysShow() bool {
+	return false
+}
+
+func (c *DNSCheck) FormatSummary(details interface{}, debug bool) string {
+	if details == nil {
+		return ""
+	}
+
+	detailsMap, ok := details.(map[string]interface{})
+	if !ok {
+		return ""
+	}
+
+	lookupsRaw, ok := detailsMap["lookups"]
+	if !ok {
+		return ""
+	}
+
+	lookups, ok := lookupsRaw.([]interface{})
+	if !ok {
+		return ""
+	}
+
+	if len(lookups) == 0 {
+		return ""
+	}
+
+	// Count successful lookups
+	successCount := 0
+	var lookupDetails []string
+
+	for _, lookup := range lookups {
+		lookupMap, ok := lookup.(map[string]interface{})
+		if !ok {
+			continue
+		}
+
+		query, _ := lookupMap["query"].(string)
+		resolvedIPsRaw, hasIPs := lookupMap["resolved_ips"]
+		latency, _ := lookupMap["latency_ms"].(float64)
+
+		if hasIPs {
+			resolvedIPs, ok := resolvedIPsRaw.([]interface{})
+			if ok && len(resolvedIPs) > 0 {
+				successCount++
+			}
+		}
+
+		if debug && query != "" {
+			if resolvedIPsRaw != nil {
+				if resolvedIPs, ok := resolvedIPsRaw.([]interface{}); ok && len(resolvedIPs) > 0 {
+					var ips []string
+					for _, ip := range resolvedIPs {
+						if ipStr, ok := ip.(string); ok {
+							ips = append(ips, ipStr)
+						}
+					}
+					lookupDetails = append(lookupDetails, fmt.Sprintf("%s: %s (%.2fms)", query, fmt.Sprintf("%v", ips), latency))
+				} else {
+					lookupDetails = append(lookupDetails, fmt.Sprintf("%s: failed", query))
+				}
+			}
+		}
+	}
+
+	summary := fmt.Sprintf("%d/%d lookups OK", successCount, len(lookups))
+	if debug && len(lookupDetails) > 0 {
+		return summary + " | " + strings.Join(lookupDetails, ", ")
+	}
+	return summary
+}
+
 func NewDNSCheck(names []string, server string) *DNSCheck {
 	if len(names) == 0 {
 		names = DefaultDNSNames
@@ -109,4 +186,8 @@ func NewDNSCheck(names []string, server string) *DNSCheck {
 		Names:  names,
 		Server: server,
 	}
+}
+
+func init() {
+	DefaultRegistry.Register(NewDNSCheck(nil, ""))
 }

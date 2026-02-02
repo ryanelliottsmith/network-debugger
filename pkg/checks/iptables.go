@@ -97,6 +97,57 @@ func (c *IptablesCheck) detectActiveBackend(ctx context.Context) (string, error)
 	return "unknown", nil
 }
 
+func (c *IptablesCheck) IsLocal() bool {
+	return true
+}
+
+func (c *IptablesCheck) AlwaysShow() bool {
+	return false
+}
+
+func (c *IptablesCheck) FormatSummary(details interface{}, debug bool) string {
+	if details == nil {
+		return ""
+	}
+
+	detailsMap, ok := details.(map[string]interface{})
+	if !ok {
+		return ""
+	}
+
+	iptablesRaw, ok := detailsMap["iptables"]
+	if !ok {
+		return ""
+	}
+
+	iptablesMap, ok := iptablesRaw.(map[string]interface{})
+	if !ok {
+		return ""
+	}
+
+	// Get issues if present
+	issuesRaw, hasIssues := iptablesMap["issues"]
+	if hasIssues {
+		if issues, ok := issuesRaw.([]interface{}); ok && len(issues) > 0 {
+			return fmt.Sprintf("%d issues", len(issues))
+		}
+	}
+
+	legacyCount, _ := iptablesMap["legacy_rule_count"].(float64)
+	nftCount, _ := iptablesMap["nftable_rule_count"].(float64)
+
+	summary := fmt.Sprintf("%.0f legacy, %.0f nftables rules", legacyCount, nftCount)
+	if debug {
+		return summary
+	}
+
+	return "OK"
+}
+
 func NewIptablesCheck() *IptablesCheck {
 	return &IptablesCheck{}
+}
+
+func init() {
+	DefaultRegistry.Register(NewIptablesCheck())
 }
