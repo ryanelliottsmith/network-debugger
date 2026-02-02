@@ -10,7 +10,7 @@ import (
 )
 
 // DefaultPingCount is the default number of ping packets to send
-const DefaultPingCount = 5
+const DefaultPingCount = 10
 
 type PingCheck struct {
 	Count int
