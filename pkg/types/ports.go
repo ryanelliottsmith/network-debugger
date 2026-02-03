@@ -1,6 +1,5 @@
 package types
 
-// NodeRole represents which type of nodes a port should be checked on
 type NodeRole string
 
 const (
@@ -10,7 +9,6 @@ const (
 	NodeRoleControlPlane NodeRole = "controlplane"
 )
 
-// PortCheck defines a port to check connectivity against
 type PortCheck struct {
 	Port     int      `json:"port"`
 	Protocol string   `json:"protocol"`

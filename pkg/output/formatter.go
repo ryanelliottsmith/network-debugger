@@ -203,7 +203,6 @@ func printEventsTable(events []*types.Event, debug bool) error {
 				fmt.Printf("%-20s %-10s %s\n", node, status, details)
 			}
 		} else {
-			// Connectivity checks: Node, Target, Status, Details
 			fmt.Printf("%-20s %-20s %-10s %s\n", "Node", "Target", "Status", "Details")
 			for _, event := range checkEvents {
 				status := "✓ PASS"
@@ -290,7 +289,6 @@ func printEventsTable(events []*types.Event, debug bool) error {
 		}
 	}
 
-	// Print summary
 	fmt.Println()
 	fmt.Println(strings.Repeat("=", 60))
 	fmt.Printf("Summary: %d passed, %d failed, %d errors\n", passed, failed, errors)

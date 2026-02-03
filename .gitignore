@@ -36,3 +36,4 @@ bin/
 
 # Distribution
 dist/
+.vscode/settings.json
