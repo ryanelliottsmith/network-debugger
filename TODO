@@ -15,7 +15,5 @@
 - Hostconfig - Add multiple interface warning
 - Test ipv6
 - Persistent run(run forever)?
-- Capture hops in ping results
 - Run against Rancher for all downstream clusters?
 - Any specific port checks in pods?
-- Default to cleanup=true

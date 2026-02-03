@@ -50,6 +50,7 @@ type PingCheckDetails struct {
 	MinLatencyMS    float64 `json:"min_latency_ms"`
 	AvgLatencyMS    float64 `json:"avg_latency_ms"`
 	MaxLatencyMS    float64 `json:"max_latency_ms"`
+	TTL             int     `json:"ttl"`
 }
 
 type PortCheckDetails struct {

@@ -60,6 +60,7 @@ func (c *PingCheck) Run(ctx context.Context, target string) (*types.TestResult, 
 		MinLatencyMS:    float64(stats.MinRtt.Microseconds()) / 1000.0,
 		AvgLatencyMS:    float64(stats.AvgRtt.Microseconds()) / 1000.0,
 		MaxLatencyMS:    float64(stats.MaxRtt.Microseconds()) / 1000.0,
+		TTL:             getTTLFromStats(stats),
 	}
 
 	if details.PacketLoss > 0 {
@@ -73,6 +74,13 @@ func (c *PingCheck) Run(ctx context.Context, target string) (*types.TestResult, 
 	result.Details["ping"] = details
 
 	return result, nil
+}
+
+func getTTLFromStats(stats *probing.Statistics) int {
+	if len(stats.TTLs) > 0 {
+		return int(stats.TTLs[0])
+	}
+	return 0
 }
 
 func (c *PingCheck) IsLocal() bool {
@@ -109,9 +117,10 @@ func formatPingMap(m map[string]interface{}) string {
 	packetsReceived, _ := m["packets_received"].(float64)
 	packetLoss, _ := m["packet_loss_percent"].(float64)
 	avgLatency, _ := m["avg_latency_ms"].(float64)
+	ttl, _ := m["ttl"].(float64)
 
-	return fmt.Sprintf("%.0f sent, %.0f received, %.1f%% loss, avg %.2fms",
-		packetsSent, packetsReceived, packetLoss, avgLatency)
+	return fmt.Sprintf("%.0f sent, %.0f received, %.1f%% loss, avg %.2fms, ttl %.0f",
+		packetsSent, packetsReceived, packetLoss, avgLatency, ttl)
 }
 
 func NewPingCheck(count int) *PingCheck {
