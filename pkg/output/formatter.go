@@ -119,6 +119,33 @@ func FormatEvents(events []*types.Event, format string, debug bool) error {
 	}
 }
 
+// calculateColumnWidths scans a set of events and returns the minimum column
+// widths needed to display all Node and Target values without truncation.
+// Each returned width is at least minWidth characters so short names don't look cramped.
+func calculateColumnWidths(events []*types.Event, isLocal bool) (nodeWidth, targetWidth int) {
+	const minWidth = 6
+	nodeWidth = minWidth
+	targetWidth = minWidth
+
+	// Header labels set a floor as well
+	if len("Node") > nodeWidth {
+		nodeWidth = len("Node")
+	}
+	if !isLocal && len("Target") > targetWidth {
+		targetWidth = len("Target")
+	}
+
+	for _, event := range events {
+		if len(event.Node) > nodeWidth {
+			nodeWidth = len(event.Node)
+		}
+		if !isLocal && len(event.Target) > targetWidth {
+			targetWidth = len(event.Target)
+		}
+	}
+	return nodeWidth, targetWidth
+}
+
 func printEventsTable(events []*types.Event, debug bool) error {
 	if len(events) == 0 {
 		fmt.Println("No test results collected.")
@@ -174,22 +201,19 @@ func printEventsTable(events []*types.Event, debug bool) error {
 			})
 		}
 
+		// Calculate dynamic column widths from actual data
+		nodeWidth, targetWidth := calculateColumnWidths(checkEvents, isLocal)
+
 		// Print check header
 		fmt.Printf("\n%s\n", strings.ToUpper(check))
-		fmt.Println(strings.Repeat("-", 60))
-
 		if isLocal {
-			// Local checks: Node, Status, Details
-			fmt.Printf("%-20s %-10s %s\n", "Node", "Status", "Details")
+			// separator: nodeWidth + 3 + statusWidth(10) + 3 + len("Details")
+			fmt.Println(strings.Repeat("-", nodeWidth+3+10+3+len("Details")))
+			fmt.Printf("%-*s   %-10s   %s\n", nodeWidth, "Node", "Status", "Details")
 			for _, event := range checkEvents {
 				status := "✓ PASS"
 				if event.Status == "fail" {
 					status = "✗ FAIL"
-				}
-
-				node := event.Node
-				if len(node) > 20 {
-					node = node[:17] + "..."
 				}
 
 				details := ""
@@ -200,24 +224,16 @@ func printEventsTable(events []*types.Event, debug bool) error {
 					details = event.Error
 				}
 
-				fmt.Printf("%-20s %-10s %s\n", node, status, details)
+				fmt.Printf("%-*s   %-10s   %s\n", nodeWidth, event.Node, status, details)
 			}
 		} else {
-			fmt.Printf("%-20s %-20s %-10s %s\n", "Node", "Target", "Status", "Details")
+			// separator: nodeWidth + 3 + targetWidth + 3 + statusWidth(10) + 3 + len("Details")
+			fmt.Println(strings.Repeat("-", nodeWidth+3+targetWidth+3+10+3+len("Details")))
+			fmt.Printf("%-*s   %-*s   %-10s   %s\n", nodeWidth, "Node", targetWidth, "Target", "Status", "Details")
 			for _, event := range checkEvents {
 				status := "✓ PASS"
 				if event.Status == "fail" {
 					status = "✗ FAIL"
-				}
-
-				node := event.Node
-				if len(node) > 20 {
-					node = node[:17] + "..."
-				}
-
-				target := event.Target
-				if len(target) > 20 {
-					target = target[:17] + "..."
 				}
 
 				details := ""
@@ -233,7 +249,7 @@ func printEventsTable(events []*types.Event, debug bool) error {
 					}
 				}
 
-				fmt.Printf("%-20s %-20s %-10s %s\n", node, target, status, details)
+				fmt.Printf("%-*s   %-*s   %-10s   %s\n", nodeWidth, event.Node, targetWidth, event.Target, status, details)
 			}
 		}
 	}
@@ -251,24 +267,17 @@ func printEventsTable(events []*types.Event, debug bool) error {
 			continue
 		}
 
+		// Fallback checks are never local, so always show Node + Target
+		nodeWidth, targetWidth := calculateColumnWidths(checkEvents, false)
+
 		fmt.Printf("\n%s\n", strings.ToUpper(check))
-		fmt.Println(strings.Repeat("-", 60))
-		fmt.Printf("%-20s %-20s %-10s %s\n", "Node", "Target", "Status", "Details")
+		fmt.Println(strings.Repeat("-", nodeWidth+3+targetWidth+3+10+3+len("Details")))
+		fmt.Printf("%-*s   %-*s   %-10s   %s\n", nodeWidth, "Node", targetWidth, "Target", "Status", "Details")
 
 		for _, event := range checkEvents {
 			status := "✓ PASS"
 			if event.Status == "fail" {
 				status = "✗ FAIL"
-			}
-
-			node := event.Node
-			if len(node) > 20 {
-				node = node[:17] + "..."
-			}
-
-			target := event.Target
-			if len(target) > 20 {
-				target = target[:17] + "..."
 			}
 
 			details := ""
@@ -285,7 +294,7 @@ func printEventsTable(events []*types.Event, debug bool) error {
 				}
 			}
 
-			fmt.Printf("%-20s %-20s %-10s %s\n", node, target, status, details)
+			fmt.Printf("%-*s   %-*s   %-10s   %s\n", nodeWidth, event.Node, targetWidth, event.Target, status, details)
 		}
 	}
 
