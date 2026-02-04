@@ -6,6 +6,7 @@ import (
 	"os/exec"
 	"regexp"
 	"strconv"
+	"strings"
 
 	"github.com/ryanelliottsmith/network-debugger/pkg/types"
 	"github.com/ryanelliottsmith/network-debugger/pkg/util"
@@ -40,15 +41,11 @@ func (c *HostConfigCheck) Run(ctx context.Context, target string) (*types.TestRe
 		details.IPForwarding = true
 	}
 
-	// TODO: Compare MTU between nodes
 	mtu, err := c.getMTU(ctx)
 	if err != nil {
 		issues = append(issues, fmt.Sprintf("failed to get MTU: %v", err))
 	} else {
 		details.MTU = mtu
-		if mtu < 1450 {
-			issues = append(issues, fmt.Sprintf("MTU is low (%d), may cause issues with overlay networks", mtu))
-		}
 	}
 
 	kernelParams := map[string]string{
@@ -66,7 +63,6 @@ func (c *HostConfigCheck) Run(ctx context.Context, target string) (*types.TestRe
 
 	if len(issues) > 0 {
 		result.Status = types.StatusFail
-		result.Error = fmt.Sprintf("%d configuration issues found", len(issues))
 		details.Issues = issues
 	}
 
@@ -79,23 +75,37 @@ func (c *HostConfigCheck) Run(ctx context.Context, target string) (*types.TestRe
 }
 
 func (c *HostConfigCheck) getMTU(ctx context.Context) (int, error) {
-	cmd := exec.CommandContext(ctx, "ip", "link", "show")
-	output, err := cmd.CombinedOutput()
+	// Determine the default route interface from "ip route show default"
+	routeOut, err := exec.CommandContext(ctx, "ip", "route", "show", "default").CombinedOutput()
 	if err != nil {
-		return 0, fmt.Errorf("failed to run ip link: %w", err)
+		return 0, fmt.Errorf("failed to get default route: %w", err)
 	}
 
-	re := regexp.MustCompile(`mtu (\d+)`)
-	matches := re.FindStringSubmatch(string(output))
-	if len(matches) >= 2 {
-		mtu, err := strconv.Atoi(matches[1])
-		if err != nil {
-			return 0, err
-		}
-		return mtu, nil
+	devRe := regexp.MustCompile(`dev (\S+)`)
+	devMatches := devRe.FindStringSubmatch(string(routeOut))
+	if len(devMatches) < 2 {
+		return 0, fmt.Errorf("no default route found")
+	}
+	iface := devMatches[1]
+
+	// Get MTU for that specific interface
+	linkOut, err := exec.CommandContext(ctx, "ip", "link", "show", iface).CombinedOutput()
+	if err != nil {
+		return 0, fmt.Errorf("failed to get link info for %s: %w", iface, err)
 	}
 
-	return 0, fmt.Errorf("could not find MTU in ip link output")
+	mtuRe := regexp.MustCompile(`mtu (\d+)`)
+	mtuMatches := mtuRe.FindStringSubmatch(string(linkOut))
+	if len(mtuMatches) < 2 {
+		return 0, fmt.Errorf("could not find MTU for interface %s", iface)
+	}
+
+	mtu, err := strconv.Atoi(mtuMatches[1])
+	if err != nil {
+		return 0, fmt.Errorf("failed to parse MTU for interface %s: %w", iface, err)
+	}
+
+	return mtu, nil
 }
 
 func (c *HostConfigCheck) IsLocal() bool {
@@ -103,54 +113,45 @@ func (c *HostConfigCheck) IsLocal() bool {
 }
 
 func (c *HostConfigCheck) AlwaysShow() bool {
-	return false
+	return true
 }
 
 func (c *HostConfigCheck) FormatSummary(details interface{}, debug bool) string {
-	if details == nil {
+	hc := extractHostConfig(details)
+	if hc == nil {
 		return ""
 	}
-
-	detailsMap, ok := details.(map[string]interface{})
-	if !ok {
-		return ""
-	}
-
-	hostconfigRaw, ok := detailsMap["hostconfig"]
-	if !ok {
-		return ""
-	}
-
-	hostconfigMap, ok := hostconfigRaw.(map[string]interface{})
-	if !ok {
-		return ""
-	}
-
-	// Get issues if present
-	issuesRaw, hasIssues := hostconfigMap["issues"]
-	if hasIssues {
-		if issues, ok := issuesRaw.([]interface{}); ok {
-			issueCount := len(issues)
-			if issueCount > 0 {
-				return fmt.Sprintf("%d configuration issues", issueCount)
-			}
-		}
-	}
-
-	// No issues, show basic info
-	ipForwarding, _ := hostconfigMap["ip_forwarding"].(bool)
-	mtu, _ := hostconfigMap["mtu"].(float64)
 
 	forwardingStr := "disabled"
-	if ipForwarding {
+	if ipFwd, _ := hc["ip_forwarding"].(bool); ipFwd {
 		forwardingStr = "enabled"
 	}
 
-	if debug {
-		return fmt.Sprintf("IP forwarding %s, MTU %d", forwardingStr, int(mtu))
+	mtu, _ := hc["mtu"].(float64)
+	summary := fmt.Sprintf("IP forwarding: %s, MTU: %d", forwardingStr, int(mtu))
+
+	if issues, _ := hc["issues"].([]interface{}); len(issues) > 0 {
+		strs := make([]string, len(issues))
+		for i, issue := range issues {
+			strs[i], _ = issue.(string)
+		}
+		summary += " | " + strings.Join(strs, "; ")
 	}
 
-	return "OK"
+	return summary
+}
+
+// extractHostConfig pulls the nested hostconfig map out of the raw details interface.
+func extractHostConfig(details interface{}) map[string]interface{} {
+	detailsMap, ok := details.(map[string]interface{})
+	if !ok {
+		return nil
+	}
+	hc, ok := detailsMap["hostconfig"].(map[string]interface{})
+	if !ok {
+		return nil
+	}
+	return hc
 }
 
 func NewHostConfigCheck() *HostConfigCheck {
