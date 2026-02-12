@@ -59,6 +59,7 @@ type PortCheckDetails struct {
 	Open         bool    `json:"open"`
 	LatencyMS    float64 `json:"latency_ms,omitempty"`
 	ResponseData string  `json:"response_data,omitempty"`
+	Error        string  `json:"error,omitempty"`
 }
 
 type BandwidthCheckDetails struct {

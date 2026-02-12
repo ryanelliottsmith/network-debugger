@@ -59,30 +59,50 @@ func (c *PortsCheck) checkPort(ctx context.Context, host string, port types.Port
 	address := fmt.Sprintf("%s:%d", host, port.Port)
 	start := time.Now()
 
-	var conn net.Conn
-	var err error
-
-	dialer := &net.Dialer{}
-
 	if port.Protocol == "tcp" {
-		conn, err = dialer.DialContext(ctx, "tcp", address)
-	} else if port.Protocol == "udp" {
-		conn, err = dialer.DialContext(ctx, "udp", address)
+		dialer := &net.Dialer{}
+		conn, err := dialer.DialContext(ctx, "tcp", address)
 		if err == nil {
+			defer conn.Close()
 			details.Open = true
 			details.LatencyMS = float64(time.Since(start).Microseconds()) / 1000.0
+		} else {
+			details.Error = err.Error()
 		}
-	}
+	} else if port.Protocol == "udp" {
+		// Use DialContext to create a "connected" UDP socket.
+		// This is required to receive ICMP "Connection Refused" errors on Read.
+		dialer := &net.Dialer{}
+		conn, err := dialer.DialContext(ctx, "udp", address)
+		if err == nil {
+			defer conn.Close()
 
-	if conn != nil {
-		defer conn.Close()
-	}
+			// Set a deadline from context or default to 2 seconds
+			deadline, ok := ctx.Deadline()
+			if !ok {
+				deadline = time.Now().Add(2 * time.Second)
+			}
+			conn.SetDeadline(deadline)
 
-	elapsed := time.Since(start)
+			// Write a dummy byte
+			_, err = conn.Write([]byte{0})
+			if err == nil {
+				b := make([]byte, 1)
+				_, readErr := conn.Read(b)
 
-	if err == nil && port.Protocol == "tcp" {
-		details.Open = true
-		details.LatencyMS = float64(elapsed.Microseconds()) / 1000.0
+				if readErr == nil {
+					// We received data, so it's definitely OPEN
+					details.Open = true
+					details.LatencyMS = float64(time.Since(start).Microseconds()) / 1000.0
+				} else {
+					details.Error = readErr.Error()
+				}
+			} else {
+				details.Error = err.Error()
+			}
+		} else {
+			details.Error = err.Error()
+		}
 	}
 
 	return details
@@ -138,7 +158,11 @@ func (c *PortsCheck) FormatSummary(details interface{}, debug bool) string {
 			}
 		} else {
 			if debug {
-				portDetails = append(portDetails, fmt.Sprintf("%d/%s: CLOSED", port, protocol))
+				msg := fmt.Sprintf("%d/%s: CLOSED", port, protocol)
+				if errStr, ok := portMap["error"].(string); ok && errStr != "" {
+					msg = fmt.Sprintf("%s (%s)", msg, errStr)
+				}
+				portDetails = append(portDetails, msg)
 			}
 		}
 	}
