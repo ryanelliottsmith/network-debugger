@@ -1,4 +1,3 @@
-- Add ability to export daemonsets to file, so that users can add customizations(node selector, etc)
 - Implement standalone mode:
   - Standalone mode should allow the image to be run on one node(with something like docker run, kubectl run)
   - Tests that require a target should receive a target from arguments of the run command. 

@@ -17,26 +17,28 @@ A comprehensive network debugging tool for Kubernetes clusters (RKE2/K3s). Helps
   - Host configuration (IP forwarding, MTU, kernel params)
   - Conntrack statistics and failure detection
   - iptables/nftables duplicate rule detection
-- **Flexible Deployment**: Run as coordinated DaemonSet
 - **Multiple Output Formats**: Table, JSON, YAML
+
 
 ## Check Types
 
 ### Connectivity Checks
-These checks test network connectivity between nodes and **run on both DaemonSet pods** (hostNetwork and overlay) to test both network paths:
-- **ping**: ICMP connectivity with latency statistics
-- **ports**: TCP/UDP port accessibility
-- **bandwidth**: iperf3-based throughput testing
+These checks test network connectivity between nodes:
+- **ping**: ICMP connectivity with latency statistics (runs on both host and overlay networks)
+- **bandwidth**: iperf3-based throughput testing (runs on both host and overlay networks)
+- **ports**: TCP/UDP port accessibility (runs on **host network only**)
 
 ### Node-Wide Checks
 These checks run on all pods (both networks) across all nodes:
 - **dns**: DNS resolution testing
+  - **Host Network**: Tests external resolution (e.g. google.com)
+  - **Overlay Network**: Tests internal (cluster.local) and external resolution
 
 ### Local Configuration Checks
 These checks examine local node configuration and **run once per node** (hostNetwork pod only):
 - **hostconfig**: IP forwarding, MTU, kernel parameters
 - **conntrack**: Connection tracking statistics and capacity
-- **iptables**: iptables/nftables configuration and conflicts
+- **iptables** (WIP): Detects duplicate iptables/nftables rules and backend conflicts
 
 ## Installation
 
@@ -47,23 +49,14 @@ make build
 sudo make install
 ```
 
-### Docker
-
-```bash
-docker pull ghcr.io/ryanelliottsmith/network-debugger:latest
-```
-
 ## Quick Start
 
 ### Coordinated Cluster Testing
 
-The tool deploys two DaemonSets to test both network paths:
-- **hostNetwork DaemonSet**: Tests connectivity via the host network and runs local configuration checks
-- **overlay DaemonSet**: Tests connectivity via the CNI overlay network
-
-Connectivity checks (ping, ports, bandwidth) run on both pods to compare network performance and identify path-specific issues.
-
-Deploy and run comprehensive tests across all nodes:
+The `netdebug run` command handles the full lifecycle of the test:
+1.  **Deploys** the DaemonSets if they are not already present.
+2.  **Runs** the specified checks.
+3.  **Cleans up** the DaemonSets automatically after the run (unless `--cleanup=false` is used).
 
 ```bash
 # Run all default checks (excludes bandwidth)
@@ -78,8 +71,8 @@ netdebug run --checks=dns,ping,bandwidth
 # Test only overlay network
 netdebug run --no-host-network
 
-# Cleanup DaemonSet after completion
-netdebug run --cleanup
+# Keep DaemonSets running after completion (useful for debugging)
+netdebug run --cleanup=false
 ```
 
 ### DaemonSet Management
@@ -117,13 +110,17 @@ DaemonSet Pods (netdebug agent --mode=configmap)
 
 ## Default Ports
 
-The tool includes default port checks for RKE2/K3s clusters. Most ports are currently disabled pending further testing.
+The tool includes default port checks for RKE2/K3s clusters. These checks are context-aware and verify ports based on the target node's role (Control Plane vs. Worker).
 
 ### Currently Tested Ports
 
-| Port | Protocol | Service | Status |
-|------|----------|---------|--------|
-| 10250 | TCP | kubelet | ✅ Enabled |
+| Port | Protocol | Service | Role | Status |
+|------|----------|---------|------|--------|
+| 10250 | TCP | kubelet | All Nodes | ✅ Enabled |
+| 6443 | TCP | kube-apiserver | Control Plane | ✅ Enabled |
+| 9345 | TCP | RKE2 supervisor | Control Plane | ✅ Enabled |
+| 2379 | TCP | etcd-client | Control Plane | ✅ Enabled |
+| 2380 | TCP | etcd-peer | Control Plane | ✅ Enabled |
 
 ### Available But Disabled Ports
 
@@ -132,19 +129,7 @@ The following ports are defined but currently disabled in the default configurat
 **Kubernetes Core:**
 | Port | Protocol | Service | Notes |
 |------|----------|---------|-------|
-| 6443 | TCP | kube-apiserver | Control plane only |
 | 10255 | TCP | kubelet-readonly | Deprecated in newer versions |
-
-**RKE2/K3s Specific:**
-| Port | Protocol | Service |
-|------|----------|---------|
-| 9345 | TCP | RKE2 supervisor |
-
-**etcd:**
-| Port | Protocol | Service |
-|------|----------|---------|
-| 2379 | TCP | etcd-client |
-| 2380 | TCP | etcd-peer |
 
 **CNI - Flannel:**
 | Port | Protocol | Service |
