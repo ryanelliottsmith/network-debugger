@@ -69,7 +69,7 @@ netdebug run --checks=dns,ping,ports
 netdebug run --checks=dns,ping,bandwidth
 
 # Test only overlay network
-netdebug run --no-host-network
+netdebug run --host-network=false
 
 # Keep DaemonSets running after completion (useful for debugging)
 netdebug run --cleanup=false

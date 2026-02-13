@@ -27,8 +27,6 @@ func init() {
 	runCmd.Flags().StringSlice("checks", []string{"dns", "ping", "hostconfig", "conntrack", "iptables"}, "Checks to run (dns,ping,ports,bandwidth,hostconfig,conntrack,iptables)")
 	runCmd.Flags().Bool("host-network", true, "Test host network path")
 	runCmd.Flags().Bool("overlay", true, "Test overlay network path")
-	// runCmd.Flags().Bool("no-host-network", false, "Disable host network testing")
-	// runCmd.Flags().Bool("no-overlay", false, "Disable overlay network testing")
 	runCmd.Flags().StringSlice("ports", []string{}, "Override default port list (format: 8080/tcp:name,9000/udp:name)")
 	runCmd.Flags().StringP("namespace", "n", "default", "Namespace for DaemonSet deployment")
 	runCmd.Flags().Duration("timeout", 5*time.Minute, "Overall timeout (0 = no timeout)")
@@ -42,23 +40,14 @@ func runTests(cmd *cobra.Command, args []string) error {
 	checks, _ := cmd.Flags().GetStringSlice("checks")
 	hostNetwork, _ := cmd.Flags().GetBool("host-network")
 	overlay, _ := cmd.Flags().GetBool("overlay")
-	noHostNetwork, _ := cmd.Flags().GetBool("no-host-network")
-	noOverlay, _ := cmd.Flags().GetBool("no-overlay")
 	namespace, _ := cmd.Flags().GetString("namespace")
 	timeout, _ := cmd.Flags().GetDuration("timeout")
 	cleanup, _ := cmd.Flags().GetBool("cleanup")
 	outputFormat, _ := cmd.Flags().GetString("output")
 	debug, _ := cmd.Flags().GetBool("debug")
 
-	if noHostNetwork {
-		hostNetwork = false
-	}
-	if noOverlay {
-		overlay = false
-	}
-
 	if !hostNetwork && !overlay {
-		return fmt.Errorf("at least one network mode must be enabled (not both --no-host-network or --no-overlay)")
+		return fmt.Errorf("at least one network mode must be enabled (use --host-network=false or --overlay=false, not both)")
 	}
 
 	bandwidthRequested := false
