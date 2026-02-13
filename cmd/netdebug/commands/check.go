@@ -144,7 +144,6 @@ func init() {
 	checkCmd.AddCommand(checkConntrackCmd)
 	checkCmd.AddCommand(checkIptablesCmd)
 
-	checkDNSCmd.Flags().StringSlice("servers", []string{}, "DNS servers to test")
 	checkDNSCmd.Flags().StringSlice("names", []string{}, fmt.Sprintf("Names to resolve (default: %s)", strings.Join(checks.DefaultDNSNames, ", ")))
 
 	checkPingCmd.Flags().StringSlice("targets", []string{}, "Target hosts to ping")

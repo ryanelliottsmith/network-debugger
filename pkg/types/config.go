@@ -2,6 +2,14 @@ package types
 
 import "time"
 
+// NetworkType indicates the network context a pod is running in.
+type NetworkType string
+
+const (
+	NetworkTypeHost    NetworkType = "hostnetwork"
+	NetworkTypeOverlay NetworkType = "overlay"
+)
+
 type TargetNode struct {
 	NodeName       string `json:"node_name"`
 	PodName        string `json:"pod_name,omitempty"`
@@ -20,10 +28,10 @@ type BandwidthTest struct {
 type Config struct {
 	RunID         string         `json:"run_id"`
 	TriggeredAt   time.Time      `json:"triggered_at"`
+	NetworkType   NetworkType    `json:"network_type"`
 	Targets       []TargetNode   `json:"targets"`
 	Checks        []string       `json:"checks"`
 	Ports         []PortCheck    `json:"ports"`
-	DNSServers    []string       `json:"dns_servers,omitempty"`
 	DNSNames      []string       `json:"dns_names"`
 	BandwidthTest *BandwidthTest `json:"bandwidth_test,omitempty"`
 	Timeout       int            `json:"timeout_seconds"`

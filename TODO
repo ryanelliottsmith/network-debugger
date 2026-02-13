@@ -9,7 +9,6 @@
   - Test results shouldn't have their own separate output logic, make the output logic generic
 - Check for proxies - system env var, containerd config??
 - Compare MTU(host to host, and host to vxlan)
-- Load average < numCPU
 - Description on checks in results(what the expected results should be)
 - Hostconfig - Add multiple interface warning
 - Test ipv6

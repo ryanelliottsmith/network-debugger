@@ -14,8 +14,7 @@ import (
 var DefaultDNSNames = []string{"kubernetes.default.svc.cluster.local", "google.com"}
 
 type DNSCheck struct {
-	Names  []string
-	Server string
+	Names []string
 }
 
 func (c *DNSCheck) Name() string {
@@ -29,15 +28,10 @@ func (c *DNSCheck) Run(ctx context.Context, target string) (*types.TestResult, e
 		Status: types.StatusPass,
 	}
 
-	names := c.Names
-	if len(names) == 0 {
-		names = DefaultDNSNames
-	}
-
 	var allDetails []types.DNSCheckDetails
 	var errors []string
 
-	for _, name := range names {
+	for _, name := range c.Names {
 		details, err := c.resolveWithTiming(ctx, name)
 		if err != nil {
 			errors = append(errors, fmt.Sprintf("%s: %v", name, err))
@@ -62,30 +56,12 @@ func (c *DNSCheck) Run(ctx context.Context, target string) (*types.TestResult, e
 
 func (c *DNSCheck) resolveWithTiming(ctx context.Context, name string) (types.DNSCheckDetails, error) {
 	details := types.DNSCheckDetails{
-		Query:  name,
-		Server: c.Server,
-	}
-
-	if details.Server == "" {
-		details.Server = "system-default"
+		Query: name,
 	}
 
 	start := time.Now()
 
-	var resolver *net.Resolver
-	if c.Server != "" && c.Server != "system-default" {
-		resolver = &net.Resolver{
-			PreferGo: true,
-			Dial: func(ctx context.Context, network, address string) (net.Conn, error) {
-				d := net.Dialer{}
-				return d.DialContext(ctx, "udp", c.Server+":53")
-			},
-		}
-	} else {
-		resolver = net.DefaultResolver
-	}
-
-	ips, err := resolver.LookupIP(ctx, "ip", name)
+	ips, err := net.DefaultResolver.LookupIP(ctx, "ip", name)
 	elapsed := time.Since(start)
 
 	details.LatencyMS = float64(elapsed.Microseconds()) / 1000.0
@@ -178,14 +154,26 @@ func (c *DNSCheck) FormatSummary(details interface{}, debug bool) string {
 	return summary
 }
 
-func NewDNSCheck(names []string, server string) *DNSCheck {
+func NewDNSCheck(names []string, networkType types.NetworkType) *DNSCheck {
 	if len(names) == 0 {
 		names = DefaultDNSNames
 	}
-	return &DNSCheck{
-		Names:  names,
-		Server: server,
+	if networkType == types.NetworkTypeHost {
+		names = filterClusterLocalNames(names)
 	}
+	return &DNSCheck{
+		Names: names,
+	}
+}
+
+func filterClusterLocalNames(names []string) []string {
+	var filtered []string
+	for _, name := range names {
+		if !strings.HasSuffix(name, ".cluster.local") {
+			filtered = append(filtered, name)
+		}
+	}
+	return filtered
 }
 
 func init() {

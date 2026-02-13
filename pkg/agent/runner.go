@@ -108,7 +108,7 @@ func runSingleCheck(ctx context.Context, checkName, targetIP, targetNode string,
 
 	switch checkName {
 	case "dns":
-		check = checks.NewDNSCheck(config.DNSNames, "")
+		check = checks.NewDNSCheck(config.DNSNames, config.NetworkType)
 		targetIP = "dns-test"
 
 	case "ping":

@@ -148,7 +148,7 @@ func runTests(cmd *cobra.Command, args []string) error {
 
 		if hostNetwork {
 			fmt.Println("\n--- Host Network Tests ---")
-			events, err := runStandardTests(ctx, coord, hostTargets, hostPods, checksWithoutBandwidth, timeout, debug, true)
+			events, err := runStandardTests(ctx, coord, hostTargets, hostPods, checksWithoutBandwidth, timeout, debug, types.NetworkTypeHost)
 			if err != nil {
 				fmt.Printf("Warning: host network tests failed: %v\n", err)
 			}
@@ -158,7 +158,7 @@ func runTests(cmd *cobra.Command, args []string) error {
 		if overlay {
 			fmt.Println("\n--- Overlay Network Tests ---")
 			overlayChecks := filterOutCheck(checksWithoutBandwidth, "ports")
-			events, err := runStandardTests(ctx, coord, overlayTargets, overlayPods, overlayChecks, timeout, debug, false)
+			events, err := runStandardTests(ctx, coord, overlayTargets, overlayPods, overlayChecks, timeout, debug, types.NetworkTypeOverlay)
 			if err != nil {
 				fmt.Printf("Warning: overlay network tests failed: %v\n", err)
 			}
@@ -208,24 +208,20 @@ func runTests(cmd *cobra.Command, args []string) error {
 	return nil
 }
 
-func runStandardTests(ctx context.Context, coord *coordinator.Coordinator, targets []types.TargetNode, pods []types.TargetNode, checks []string, timeout time.Duration, debug bool, isHostNetwork bool) ([]*types.Event, error) {
+func runStandardTests(ctx context.Context, coord *coordinator.Coordinator, targets []types.TargetNode, pods []types.TargetNode, checks []string, timeout time.Duration, debug bool, networkType types.NetworkType) ([]*types.Event, error) {
 	testCtx, cancel := context.WithCancel(ctx)
 	defer cancel()
 
 	runID := coordinator.GenerateRunID()
 
-	dnsNames := checkspkg.DefaultDNSNames
-	if isHostNetwork {
-		dnsNames = filterClusterLocalNames(dnsNames)
-	}
-
 	config := &types.Config{
 		RunID:       runID,
 		TriggeredAt: time.Now(),
+		NetworkType: networkType,
 		Targets:     targets,
 		Checks:      checks,
 		Ports:       types.DefaultPorts(),
-		DNSNames:    dnsNames,
+		DNSNames:    checkspkg.DefaultDNSNames,
 		Timeout:     5,
 		Debug:       debug,
 	}
@@ -297,16 +293,6 @@ func runBandwidthTests(ctx context.Context, coord *coordinator.Coordinator, targ
 
 	fmt.Printf("✅ All bandwidth tests completed\n")
 	return allEvents, nil
-}
-
-func filterClusterLocalNames(names []string) []string {
-	var filtered []string
-	for _, name := range names {
-		if !strings.HasSuffix(name, ".cluster.local") {
-			filtered = append(filtered, name)
-		}
-	}
-	return filtered
 }
 
 func filterOutCheck(checks []string, checkToRemove string) []string {

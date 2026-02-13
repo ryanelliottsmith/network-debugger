@@ -37,7 +37,6 @@ type TestSummary struct {
 }
 
 type DNSCheckDetails struct {
-	Server      string   `json:"server"`
 	Query       string   `json:"query"`
 	ResolvedIPs []string `json:"resolved_ips,omitempty"`
 	LatencyMS   float64  `json:"latency_ms"`
