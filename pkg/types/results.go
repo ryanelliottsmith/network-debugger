@@ -72,6 +72,8 @@ type BandwidthCheckDetails struct {
 type HostConfigDetails struct {
 	IPForwarding bool              `json:"ip_forwarding"`
 	MTU          int               `json:"mtu"`
+	LoadAverage  float64           `json:"load_average"`
+	NumCPU       int               `json:"num_cpu"`
 	KernelParams map[string]string `json:"kernel_params,omitempty"`
 	Issues       []string          `json:"issues,omitempty"`
 }

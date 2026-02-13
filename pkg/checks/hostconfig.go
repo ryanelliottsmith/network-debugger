@@ -3,8 +3,10 @@ package checks
 import (
 	"context"
 	"fmt"
+	"os"
 	"os/exec"
 	"regexp"
+	"runtime"
 	"strconv"
 	"strings"
 
@@ -46,6 +48,19 @@ func (c *HostConfigCheck) Run(ctx context.Context, target string) (*types.TestRe
 		issues = append(issues, fmt.Sprintf("failed to get MTU: %v", err))
 	} else {
 		details.MTU = mtu
+	}
+
+	numCPU := runtime.NumCPU()
+	details.NumCPU = numCPU
+	loadAvg, err := c.getLoadAverage()
+	if err != nil {
+		issues = append(issues, fmt.Sprintf("failed to read load average: %v", err))
+	} else {
+		details.LoadAverage = loadAvg
+		threshold := float64(numCPU) * 0.8
+		if loadAvg > threshold {
+			issues = append(issues, fmt.Sprintf("load average %.2f exceeds 80%% of available CPUs (%d) — threshold: %.2f", loadAvg, numCPU, threshold))
+		}
 	}
 
 	kernelParams := map[string]string{
@@ -108,6 +123,25 @@ func (c *HostConfigCheck) getMTU(ctx context.Context) (int, error) {
 	return mtu, nil
 }
 
+func (c *HostConfigCheck) getLoadAverage() (float64, error) {
+	data, err := os.ReadFile("/proc/loadavg")
+	if err != nil {
+		return 0, fmt.Errorf("failed to read /proc/loadavg: %w", err)
+	}
+
+	fields := strings.Fields(string(data))
+	if len(fields) < 1 {
+		return 0, fmt.Errorf("unexpected /proc/loadavg format")
+	}
+
+	load1, err := strconv.ParseFloat(fields[0], 64)
+	if err != nil {
+		return 0, fmt.Errorf("failed to parse load average: %w", err)
+	}
+
+	return load1, nil
+}
+
 func (c *HostConfigCheck) IsLocal() bool {
 	return true
 }
@@ -128,7 +162,9 @@ func (c *HostConfigCheck) FormatSummary(details interface{}, debug bool) string 
 	}
 
 	mtu, _ := hc["mtu"].(float64)
-	summary := fmt.Sprintf("IP forwarding: %s, MTU: %d", forwardingStr, int(mtu))
+	loadAvg, _ := hc["load_average"].(float64)
+	numCPU, _ := hc["num_cpu"].(float64)
+	summary := fmt.Sprintf("IP forwarding: %s, MTU: %d, Load avg: %.2f/%d CPUs", forwardingStr, int(mtu), loadAvg, int(numCPU))
 
 	if issues, _ := hc["issues"].([]interface{}); len(issues) > 0 {
 		strs := make([]string, len(issues))
