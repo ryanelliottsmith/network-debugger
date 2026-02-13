@@ -168,6 +168,6 @@ func init() {
 		cmd.Flags().StringP("namespace", "n", "default", "Namespace for deployment")
 	}
 
-	deployInstallCmd.Flags().String("image", "", "Override default image (default: ghcr.io/ryanelliottsmith/network-debugger:"+version+")")
-	deployTemplateCmd.Flags().String("image", "", "Override default image (default: ghcr.io/ryanelliottsmith/network-debugger:"+version+")")
+	deployInstallCmd.Flags().String("image", "", "Override default image (default: "+k8s.DefaultImage+")")
+	deployTemplateCmd.Flags().String("image", "", "Override default image (default: "+k8s.DefaultImage+")")
 }

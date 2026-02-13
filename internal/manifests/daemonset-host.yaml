@@ -29,7 +29,7 @@ spec:
         effect: NoExecute
       containers:
       - name: netdebug
-        image: ghcr.io/ryanelliottsmith/network-debugger:dev
+        image: IMAGE_PLACEHOLDER
         command: ["netdebug"]
         args:
         - agent
