@@ -161,6 +161,38 @@ func (c *MyCheck) FormatSummary(details interface{}, debug bool) string {
 }
 ```
 
+### Handling Pass/Fail Status
+
+When your `Run` method completes, you must indicate whether the network check succeeded or failed using the `Status` field on `*types.TestResult`. The status constants are defined in the `types` package:
+
+- `types.StatusPass`: The check succeeded.
+- `types.StatusFail`: The check failed (e.g., connection refused, timeout).
+- `types.StatusSkipped`: The check was skipped (e.g., not applicable for this node).
+- `types.StatusIncomplete`: The check could not finish.
+
+If your check fails, you should populate the `Error` string field on the result with a human-readable explanation. This string will be printed in the output when users run the CLI:
+
+```go
+func (c *MyCheck) Run(ctx context.Context, target string) (*types.TestResult, error) {
+    result := &types.TestResult{
+        Check:  c.Name(),
+        Target: target,
+        Status: types.StatusPass, // Default to pass
+    }
+
+    err := performNetworkCheck()
+    if err != nil {
+        result.Status = types.StatusFail
+        result.Error = fmt.Sprintf("connection refused: %v", err)
+        return result, nil // Return the result with a fail status, not a Go error
+    }
+
+    return result, nil
+}
+```
+
+*Note: If your `Run` method returns a non-nil Go `error` (e.g., `return nil, err`), the CLI runner will automatically catch it and convert the result to a `StatusFail` with the error message. However, the convention is to handle expected check failures (like a closed port or timeout) by returning a populated `TestResult` without a Go error.*
+
 ### Wiring Standalone Checks
 
 While the `init()` function registers the check with the `DefaultRegistry` for DaemonSet execution, standalone checks might also need to be wired into the CLI commands. If your check can be run directly from the CLI, you may need to add it to `cmd/netdebug/commands/check.go`.
