@@ -23,11 +23,13 @@ make build && ./bin/netdebug
 go run ./cmd/netdebug
 ```
 
-**Note on Cluster Testing:** Testing the DaemonSet component requires building a container image and making it available to your cluster nodes. You can do this by building and pushing the image:
+**Note on Cluster Testing:** Testing the DaemonSet component requires building a container image and making it available to your cluster nodes. You can do this by building and pushing the image.
+
+Since contributors do not have push access to the default `ghcr.io` registry, you should override the `IMAGE_NAME` and `IMAGE_TAG` variables to point to your own container registry:
 
 ```bash
-make docker-build
-make docker-push
+make docker-build IMAGE_NAME=myregistry/network-debugger IMAGE_TAG=test
+make docker-push IMAGE_NAME=myregistry/network-debugger IMAGE_TAG=test
 ```
 
 Alternatively, you can sideload the built image directly to your cluster nodes for testing.
