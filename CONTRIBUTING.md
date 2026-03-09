@@ -32,6 +32,16 @@ make docker-push IMAGE_NAME=myregistry/network-debugger IMAGE_TAG=test
 
 Alternatively, you can sideload the built image directly to your cluster nodes for testing.
 
+## Formatting & Linting
+
+Before committing your changes, you must format and lint your code. These steps are mandatory:
+
+```bash
+make fmt
+make lint
+```
+
+
 ## Adding a New Check
 
 Network Debugger is designed to be extensible. All checks implement the `type Check interface` defined in `pkg/checks/check.go`.
@@ -130,4 +140,4 @@ While the `init()` function registers the check with the `DefaultRegistry` for D
 
 Currently, the `.github/workflows/dev.yaml` workflow automatically builds and pushes a development image (`ghcr.io/ryanelliottsmith/network-debugger:dev-<sha>`) on every commit to the `main` branch. 
 
-**Note:** This is a temporary workflow setup and will change in the future as the project matures.
+**Note:** This is a temporary workflow setup and will change to proper semver in the near future.
