@@ -221,7 +221,11 @@ func printEventsTable(events []*types.Event, debug bool) error {
 					details = checkInstance.FormatSummary(event.Details, debug)
 				}
 				if event.Error != "" {
-					details = event.Error
+					if details != "" {
+						details = details + " | " + event.Error
+					} else {
+						details = event.Error
+					}
 				}
 
 				fmt.Printf("%-*s   %-10s   %s\n", nodeWidth, event.Node, status, details)

@@ -87,6 +87,10 @@ func (c *PingCheck) IsLocal() bool {
 	return false
 }
 
+func (c *PingCheck) HostNetworkOnly() bool {
+	return false
+}
+
 func (c *PingCheck) AlwaysShow() bool {
 	return false
 }

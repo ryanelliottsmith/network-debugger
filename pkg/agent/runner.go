@@ -26,7 +26,8 @@ func RunTests(ctx context.Context, config *types.Config, self *SelfInfo) error {
 		wg.Add(1)
 		go func(checkName string) {
 			defer wg.Done()
-			if isLocalOnlyCheck(checkName) {
+			check := checks.DefaultRegistry.Get(checkName)
+			if check != nil && check.IsLocal() {
 				runSingleCheck(ctx, checkName, "localhost", self.NodeName, config, self)
 			} else {
 				runCheckAgainstAllTargets(ctx, checkName, targets, config, self)
@@ -61,15 +62,6 @@ func filterTargets(targets []types.TargetNode, selfNodeName string) []types.Targ
 		}
 	}
 	return filtered
-}
-
-func isLocalOnlyCheck(checkName string) bool {
-	switch checkName {
-	case "hostconfig", "conntrack", "iptables":
-		return true
-	default:
-		return false
-	}
 }
 
 func runCheckAgainstAllTargets(ctx context.Context, checkName string, targets []types.TargetNode, config *types.Config, self *SelfInfo) {

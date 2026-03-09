@@ -26,6 +26,11 @@ type Check interface {
 	// These checks won't display a Target column in table output.
 	IsLocal() bool
 
+	// HostNetworkOnly returns true if this check requires the host network namespace
+	// and should only run on hostNetwork pods. Checks that inspect host-level networking
+	// (iptables, conntrack, ports, etc.) should return true.
+	HostNetworkOnly() bool
+
 	// AlwaysShow returns true if this check should always be displayed in output,
 	// even when passing. This is useful for checks like bandwidth where the
 	// result value is always interesting regardless of pass/fail status.

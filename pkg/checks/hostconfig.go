@@ -146,6 +146,10 @@ func (c *HostConfigCheck) IsLocal() bool {
 	return true
 }
 
+func (c *HostConfigCheck) HostNetworkOnly() bool {
+	return true
+}
+
 func (c *HostConfigCheck) AlwaysShow() bool {
 	return true
 }

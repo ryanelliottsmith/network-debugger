@@ -81,6 +81,10 @@ func (c *DNSCheck) IsLocal() bool {
 	return false
 }
 
+func (c *DNSCheck) HostNetworkOnly() bool {
+	return false
+}
+
 func (c *DNSCheck) AlwaysShow() bool {
 	return false
 }

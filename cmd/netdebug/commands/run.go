@@ -146,7 +146,7 @@ func runTests(cmd *cobra.Command, args []string) error {
 
 		if overlay {
 			fmt.Println("\n--- Overlay Network Tests ---")
-			overlayChecks := filterOutCheck(checksWithoutBandwidth, "ports")
+			overlayChecks := filterHostNetworkOnlyChecks(checksWithoutBandwidth)
 			events, err := runStandardTests(ctx, coord, overlayTargets, overlayPods, overlayChecks, timeout, debug, types.NetworkTypeOverlay)
 			if err != nil {
 				fmt.Printf("Warning: overlay network tests failed: %v\n", err)
@@ -284,12 +284,14 @@ func runBandwidthTests(ctx context.Context, coord *coordinator.Coordinator, targ
 	return allEvents, nil
 }
 
-func filterOutCheck(checks []string, checkToRemove string) []string {
+func filterHostNetworkOnlyChecks(checks []string) []string {
 	var filtered []string
-	for _, check := range checks {
-		if check != checkToRemove {
-			filtered = append(filtered, check)
+	for _, name := range checks {
+		check := checkspkg.DefaultRegistry.Get(name)
+		if check != nil && check.HostNetworkOnly() {
+			continue
 		}
+		filtered = append(filtered, name)
 	}
 	return filtered
 }

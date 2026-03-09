@@ -41,11 +41,6 @@ func (c *IptablesCheck) Run(ctx context.Context, target string) (*types.TestResu
 			details.LegacyRuleCount, details.NftableRuleCount))
 	}
 
-	backend, err := c.detectActiveBackend(ctx)
-	if err == nil && backend != "" {
-		issues = append(issues, fmt.Sprintf("detected active backend: %s", backend))
-	}
-
 	if len(issues) > 0 && details.DuplicateRules > 0 {
 		result.Status = types.StatusFail
 		result.Error = "iptables configuration conflict detected"
@@ -80,24 +75,11 @@ func (c *IptablesCheck) countIptablesRules(ctx context.Context, binary string) (
 	return count, nil
 }
 
-func (c *IptablesCheck) detectActiveBackend(ctx context.Context) (string, error) {
-	cmd := exec.CommandContext(ctx, "iptables", "--version")
-	output, err := cmd.CombinedOutput()
-	if err != nil {
-		return "", err
-	}
-
-	versionStr := strings.ToLower(string(output))
-	if strings.Contains(versionStr, "nf_tables") {
-		return "nftables", nil
-	} else if strings.Contains(versionStr, "legacy") {
-		return "legacy", nil
-	}
-
-	return "unknown", nil
+func (c *IptablesCheck) IsLocal() bool {
+	return true
 }
 
-func (c *IptablesCheck) IsLocal() bool {
+func (c *IptablesCheck) HostNetworkOnly() bool {
 	return true
 }
 
@@ -125,18 +107,17 @@ func (c *IptablesCheck) FormatSummary(details interface{}, debug bool) string {
 		return ""
 	}
 
-	// Get issues if present
-	issuesRaw, hasIssues := iptablesMap["issues"]
-	if hasIssues {
-		if issues, ok := issuesRaw.([]interface{}); ok && len(issues) > 0 {
-			return fmt.Sprintf("%d issues", len(issues))
-		}
-	}
-
 	legacyCount, _ := iptablesMap["legacy_rule_count"].(float64)
 	nftCount, _ := iptablesMap["nftable_rule_count"].(float64)
 
 	summary := fmt.Sprintf("%.0f legacy, %.0f nftables rules", legacyCount, nftCount)
+
+	if issuesRaw, ok := iptablesMap["issues"]; ok {
+		if issues, ok := issuesRaw.([]interface{}); ok && len(issues) > 0 {
+			summary += fmt.Sprintf(" | %d issues", len(issues))
+		}
+	}
+
 	if debug {
 		return summary
 	}

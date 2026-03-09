@@ -122,6 +122,10 @@ func (c *ConntrackCheck) IsLocal() bool {
 	return true
 }
 
+func (c *ConntrackCheck) HostNetworkOnly() bool {
+	return true
+}
+
 func (c *ConntrackCheck) AlwaysShow() bool {
 	return false
 }

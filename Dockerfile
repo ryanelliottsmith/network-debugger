@@ -27,6 +27,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     curl \
     iperf3 \
     iproute2 \
+    iptables \
     netcat-openbsd \
     tcpdump \
     procps \

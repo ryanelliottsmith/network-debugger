@@ -112,6 +112,10 @@ func (c *PortsCheck) IsLocal() bool {
 	return false
 }
 
+func (c *PortsCheck) HostNetworkOnly() bool {
+	return true
+}
+
 func (c *PortsCheck) AlwaysShow() bool {
 	return false
 }

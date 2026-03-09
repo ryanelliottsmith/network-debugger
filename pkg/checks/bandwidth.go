@@ -101,6 +101,10 @@ func (c *BandwidthCheck) IsLocal() bool {
 	return false
 }
 
+func (c *BandwidthCheck) HostNetworkOnly() bool {
+	return false
+}
+
 func (c *BandwidthCheck) AlwaysShow() bool {
 	return true
 }
