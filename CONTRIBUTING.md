@@ -132,6 +132,35 @@ func init() {
 }
 ```
 
+### Check Result Formatting
+
+When your check finishes its `Run` method, it returns a `*types.TestResult` which includes a `Details` field (typically a `map[string]interface{}`). This field holds the raw result data of your network check.
+
+To display this data concisely in the CLI's table output, you must implement the `FormatSummary(details interface{}, debug bool) string` method. The tool's output formatter will pass the raw `Details` object directly into this function.
+
+**How to implement it:**
+1. Type-assert the `details` interface (usually to `map[string]interface{}`).
+2. Extract the relevant fields.
+3. Return a human-readable string.
+
+For example, if your `Run` method assigns `result.Details["latency"] = 45.2`, your `FormatSummary` should extract and format it:
+
+```go
+func (c *MyCheck) FormatSummary(details interface{}, debug bool) string {
+    if details == nil {
+        return ""
+    }
+
+    if d, ok := details.(map[string]interface{}); ok {
+        if latency, ok := d["latency"].(float64); ok {
+            return fmt.Sprintf("%.2fms", latency)
+        }
+    }
+    
+    return ""
+}
+```
+
 ### Wiring Standalone Checks
 
 While the `init()` function registers the check with the `DefaultRegistry` for DaemonSet execution, standalone checks might also need to be wired into the CLI commands. If your check can be run directly from the CLI, you may need to add it to `cmd/netdebug/commands/check.go`.
