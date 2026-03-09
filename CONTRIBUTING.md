@@ -1,7 +1,5 @@
 # Contributing to Network Debugger
 
-Thank you for your interest in contributing to Network Debugger! This guide will help you get started with development.
-
 ## Getting Started
 
 To set up your local development environment:
@@ -25,7 +23,7 @@ go run ./cmd/netdebug
 
 **Note on Cluster Testing:** Testing the DaemonSet component requires building a container image and making it available to your cluster nodes. You can do this by building and pushing the image.
 
-Since contributors do not have push access to the default `ghcr.io` registry, you should override the `IMAGE_NAME` and `IMAGE_TAG` variables to point to your own container registry:
+You can override the `IMAGE_NAME` and `IMAGE_TAG` variables to point to your own container registry:
 
 ```bash
 make docker-build IMAGE_NAME=myregistry/network-debugger IMAGE_TAG=test
@@ -33,15 +31,6 @@ make docker-push IMAGE_NAME=myregistry/network-debugger IMAGE_TAG=test
 ```
 
 Alternatively, you can sideload the built image directly to your cluster nodes for testing.
-
-## Formatting & Linting
-
-Before committing your changes, you must format and lint your code. These steps are mandatory:
-
-```bash
-make fmt
-make lint
-```
 
 ## Adding a New Check
 
@@ -66,70 +55,70 @@ Here is a minimal example of a new check implementation:
 package checks
 
 import (
-	"context"
-	"fmt"
+ "context"
+ "fmt"
 
-	"github.com/ryanelliottsmith/network-debugger/pkg/types"
+ "github.com/ryanelliottsmith/network-debugger/pkg/types"
 )
 
 type HelloCheck struct{}
 
 func (c *HelloCheck) Name() string {
-	return "hello"
+    return "hello"
 }
 
 func (c *HelloCheck) Run(ctx context.Context, target string) (*types.TestResult, error) {
-	result := &types.TestResult{
-		Check:  c.Name(),
-		Target: target,
-		Status: types.StatusPass,
-	}
+    result := &types.TestResult{
+        Check:  c.Name(),
+        Target: target,
+        Status: types.StatusPass,
+    }
 
-	// Simple check logic
-	message := fmt.Sprintf("Hello from %s", target)
-	
-	if result.Details == nil {
-		result.Details = make(map[string]interface{})
-	}
-	result.Details["hello"] = message
+    // Simple check logic
+    message := fmt.Sprintf("Hello from %s", target)
+    
+    if result.Details == nil {
+        result.Details = make(map[string]interface{})
+    }
+    result.Details["hello"] = message
 
-	return result, nil
+    return result, nil
 }
 
 func (c *HelloCheck) IsLocal() bool {
-	return true
+    return true
 }
 
 func (c *HelloCheck) HostNetworkOnly() bool {
-	return false
+    return false
 }
 
 func (c *HelloCheck) AlwaysShow() bool {
-	return true
+    return true
 }
 
 func (c *HelloCheck) FormatSummary(details interface{}, debug bool) string {
-	if details == nil {
-		return ""
-	}
+    if details == nil {
+        return ""
+    }
 
-	switch d := details.(type) {
-	case map[string]interface{}:
-		if msg, ok := d["hello"].(string); ok {
-			return msg
-		}
-	}
+    switch d := details.(type) {
+    case map[string]interface{}:
+        if msg, ok := d["hello"].(string); ok {
+            return msg
+        }
+    }
 
-	return ""
+    return ""
 }
 
 func NewHelloCheck() *HelloCheck {
-	return &HelloCheck{}
+    return &HelloCheck{}
 }
 
 // Register the check automatically
 func init() {
-	DefaultRegistry.Register(NewHelloCheck())
+    DefaultRegistry.Register(NewHelloCheck())
 }
 ```
 
