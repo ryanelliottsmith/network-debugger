@@ -20,6 +20,10 @@ func (c *HostConfigCheck) Name() string {
 	return "hostconfig"
 }
 
+func (c *HostConfigCheck) Description() string {
+	return ""
+}
+
 func (c *HostConfigCheck) Run(ctx context.Context, target string) (*types.TestResult, error) {
 	result := &types.TestResult{
 		Check:  c.Name(),

@@ -33,7 +33,13 @@ go.work.sum
 
 # Build artifacts
 bin/
+netdebug 
 
 # Distribution
 dist/
 .vscode/settings.json
+
+#OmO workdir
+.sisyphus/
+
+.gitignore

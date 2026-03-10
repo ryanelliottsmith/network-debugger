@@ -18,6 +18,10 @@ func (c *PortsCheck) Name() string {
 	return "ports"
 }
 
+func (c *PortsCheck) Description() string {
+	return "Tests connectivity across standard RKE2/K3s required ports between nodes."
+}
+
 func (c *PortsCheck) Run(ctx context.Context, target string) (*types.TestResult, error) {
 	result := &types.TestResult{
 		Check:   c.Name(),

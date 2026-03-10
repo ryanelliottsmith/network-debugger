@@ -17,6 +17,10 @@ func (c *ConntrackCheck) Name() string {
 	return "conntrack"
 }
 
+func (c *ConntrackCheck) Description() string {
+	return "Tests for connection tracking exhaustion. Insert failures could indicate excessive traffic, typically UDP. May need tuning."
+}
+
 func (c *ConntrackCheck) Run(ctx context.Context, target string) (*types.TestResult, error) {
 	result := &types.TestResult{
 		Check:  c.Name(),

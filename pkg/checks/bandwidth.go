@@ -18,6 +18,10 @@ func (c *BandwidthCheck) Name() string {
 	return "bandwidth"
 }
 
+func (c *BandwidthCheck) Description() string {
+	return "Tests network bandwidth between nodes using iperf. Results display throughput speed and TCP retransmit counts."
+}
+
 func (c *BandwidthCheck) Run(ctx context.Context, target string) (*types.TestResult, error) {
 	result := &types.TestResult{
 		Check:  c.Name(),

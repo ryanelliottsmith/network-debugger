@@ -21,6 +21,10 @@ func (c *DNSCheck) Name() string {
 	return "dns"
 }
 
+func (c *DNSCheck) Description() string {
+	return "Tests DNS resolution against the local resolver (/etc/resolv.conf). Verifies Cluster DNS on the overlay network and the host's default resolver on the host network."
+}
+
 func (c *DNSCheck) Run(ctx context.Context, target string) (*types.TestResult, error) {
 	result := &types.TestResult{
 		Check:  c.Name(),

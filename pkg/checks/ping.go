@@ -20,6 +20,10 @@ func (c *PingCheck) Name() string {
 	return "ping"
 }
 
+func (c *PingCheck) Description() string {
+	return "Tests basic ICMP connectivity between nodes. Results display success rates, along with minimum, maximum, and average latency."
+}
+
 func (c *PingCheck) Run(ctx context.Context, target string) (*types.TestResult, error) {
 	result := &types.TestResult{
 		Check:  c.Name(),

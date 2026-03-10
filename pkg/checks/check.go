@@ -20,6 +20,7 @@ const (
 
 type Check interface {
 	Name() string
+	Description() string
 	Run(ctx context.Context, target string) (*types.TestResult, error)
 
 	// IsLocal returns true for checks that run locally and don't have a meaningful target.

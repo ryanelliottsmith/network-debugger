@@ -206,6 +206,11 @@ func printEventsTable(events []*types.Event, debug bool) error {
 
 		// Print check header
 		fmt.Printf("\n%s\n", strings.ToUpper(check))
+		if checkInstance != nil {
+			if desc := checkInstance.Description(); desc != "" {
+				fmt.Printf("%s\n", desc)
+			}
+		}
 		if isLocal {
 			// separator: nodeWidth + 3 + statusWidth(10) + 3 + len("Details")
 			fmt.Println(strings.Repeat("-", nodeWidth+3+10+3+len("Details")))
@@ -275,6 +280,12 @@ func printEventsTable(events []*types.Event, debug bool) error {
 		nodeWidth, targetWidth := calculateColumnWidths(checkEvents, false)
 
 		fmt.Printf("\n%s\n", strings.ToUpper(check))
+		checkInstance := checks.DefaultRegistry.Get(check)
+		if checkInstance != nil {
+			if desc := checkInstance.Description(); desc != "" {
+				fmt.Printf("%s\n", desc)
+			}
+		}
 		fmt.Println(strings.Repeat("-", nodeWidth+3+targetWidth+3+10+3+len("Details")))
 		fmt.Printf("%-*s   %-*s   %-10s   %s\n", nodeWidth, "Node", targetWidth, "Target", "Status", "Details")
 

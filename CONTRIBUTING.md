@@ -48,14 +48,15 @@ Network Debugger is designed to be extensible. All checks implement the `type Ch
 
 ### The `Check` Interface
 
-The interface consists of 6 methods:
+The interface consists of 7 methods:
 
 1. `Name() string`: Returns the unique name of the check.
-2. `Run(ctx context.Context, target string) (*types.TestResult, error)`: Executes the check logic against a target.
-3. `IsLocal() bool`: Returns `true` if the check runs locally and doesn't have a meaningful target (hides the Target column in table output).
-4. `HostNetworkOnly() bool`: Returns `true` if the check requires the host network namespace (e.g., inspecting iptables, conntrack).
-5. `AlwaysShow() bool`: Returns `true` if the check should always be displayed in the output, even when passing.
-6. `FormatSummary(details interface{}, debug bool) string`: Formats the check details for display in the table output's Details column.
+2. `Description() string`: Returns a short description of the check to be displayed in the CLI output.
+3. `Run(ctx context.Context, target string) (*types.TestResult, error)`: Executes the check logic against a target.
+4. `IsLocal() bool`: Returns `true` if the check runs locally and doesn't have a meaningful target (hides the Target column in table output).
+5. `HostNetworkOnly() bool`: Returns `true` if the check requires the host network namespace (e.g., inspecting iptables, conntrack).
+6. `AlwaysShow() bool`: Returns `true` if the check should always be displayed in the output, even when passing.
+7. `FormatSummary(details interface{}, debug bool) string`: Formats the check details for display in the table output's Details column.
 
 ### Example: Hello Check
 
@@ -75,6 +76,10 @@ type HelloCheck struct{}
 
 func (c *HelloCheck) Name() string {
     return "hello"
+}
+
+func (c *HelloCheck) Description() string {
+    return "Tests basic hello connectivity to a target."
 }
 
 func (c *HelloCheck) Run(ctx context.Context, target string) (*types.TestResult, error) {
