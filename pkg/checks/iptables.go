@@ -15,6 +15,10 @@ func (c *IptablesCheck) Name() string {
 	return "iptables"
 }
 
+func (c *IptablesCheck) Description() string {
+	return "Compares iptables-nft and iptables-legacy rulesets to ensure kube-proxy and the CNI are utilizing the correct backend."
+}
+
 func (c *IptablesCheck) Run(ctx context.Context, target string) (*types.TestResult, error) {
 	result := &types.TestResult{
 		Check:  c.Name(),
@@ -25,25 +29,25 @@ func (c *IptablesCheck) Run(ctx context.Context, target string) (*types.TestResu
 	details := types.IptablesDetails{}
 	var issues []string
 
-	legacyCount, err := c.countIptablesRules(ctx, "iptables-legacy")
-	if err == nil {
+	legacyCount, legacyHasKubeChains, legacyErr := c.analyzeIptablesBackend(ctx, "iptables-legacy")
+	if legacyErr == nil {
 		details.LegacyRuleCount = legacyCount
 	}
 
-	nftCount, err := c.countIptablesRules(ctx, "iptables-nft")
-	if err == nil {
+	nftCount, nftHasKubeChains, nftErr := c.analyzeIptablesBackend(ctx, "iptables-nft")
+	if nftErr == nil {
 		details.NftableRuleCount = nftCount
 	}
 
-	if details.LegacyRuleCount > 0 && details.NftableRuleCount > 0 {
-		details.DuplicateRules = details.LegacyRuleCount + details.NftableRuleCount
-		issues = append(issues, fmt.Sprintf("both iptables-legacy (%d rules) and iptables-nft (%d rules) are active, potential conflicts",
-			details.LegacyRuleCount, details.NftableRuleCount))
+	if legacyHasKubeChains && nftHasKubeChains && legacyCount > 10 && nftCount > 10 {
+		details.DuplicateRules = legacyCount + nftCount
+		issues = append(issues, fmt.Sprintf("both iptables-legacy (%d rules) and iptables-nft (%d rules) have active KUBE/CNI chains — potential backend conflict",
+			legacyCount, nftCount))
 	}
 
 	if len(issues) > 0 && details.DuplicateRules > 0 {
 		result.Status = types.StatusFail
-		result.Error = "iptables configuration conflict detected"
+		result.Error = "iptables backend conflict detected: both legacy and nft have active Kubernetes/CNI chains"
 	}
 
 	details.Issues = issues
@@ -56,14 +60,37 @@ func (c *IptablesCheck) Run(ctx context.Context, target string) (*types.TestResu
 	return result, nil
 }
 
-func (c *IptablesCheck) countIptablesRules(ctx context.Context, binary string) (int, error) {
-	cmd := exec.CommandContext(ctx, binary, "-S")
-	output, err := cmd.CombinedOutput()
-	if err != nil {
-		return 0, err
+func (c *IptablesCheck) hasKubeCNIChains(output string) bool {
+	lines := strings.Split(output, "\n")
+	for _, line := range lines {
+		line = strings.TrimSpace(line)
+		if line == "" || strings.HasPrefix(line, "#") {
+			continue
+		}
+		tokens := strings.Fields(line)
+		if len(tokens) >= 2 && (tokens[0] == "-N" || tokens[0] == "-A") {
+			if strings.HasPrefix(tokens[1], "KUBE-") || strings.HasPrefix(tokens[1], "CNI-") {
+				return true
+			}
+		}
+	}
+	return false
+}
+
+func (c *IptablesCheck) analyzeIptablesBackend(ctx context.Context, binary string) (int, bool, error) {
+	filterCmd := exec.CommandContext(ctx, binary, "-S")
+	filterOutput, filterErr := filterCmd.CombinedOutput()
+
+	natCmd := exec.CommandContext(ctx, binary, "-t", "nat", "-S")
+	natOutput, natErr := natCmd.CombinedOutput()
+
+	if filterErr != nil && natErr != nil {
+		return 0, false, fmt.Errorf("both filter and nat table commands failed: %v, %v", filterErr, natErr)
 	}
 
-	lines := strings.Split(string(output), "\n")
+	combined := string(filterOutput) + "\n" + string(natOutput)
+
+	lines := strings.Split(combined, "\n")
 	count := 0
 	for _, line := range lines {
 		line = strings.TrimSpace(line)
@@ -72,7 +99,9 @@ func (c *IptablesCheck) countIptablesRules(ctx context.Context, binary string) (
 		}
 	}
 
-	return count, nil
+	hasKubeChains := c.hasKubeCNIChains(combined)
+
+	return count, hasKubeChains, nil
 }
 
 func (c *IptablesCheck) IsLocal() bool {
@@ -114,7 +143,16 @@ func (c *IptablesCheck) FormatSummary(details interface{}, debug bool) string {
 
 	if issuesRaw, ok := iptablesMap["issues"]; ok {
 		if issues, ok := issuesRaw.([]interface{}); ok && len(issues) > 0 {
-			summary += fmt.Sprintf(" | %d issues", len(issues))
+			strs := make([]string, 0, len(issues))
+			for _, issue := range issues {
+				if str, ok := issue.(string); ok {
+					strs = append(strs, str)
+				}
+			}
+			if len(strs) > 0 {
+				summary += " | " + strings.Join(strs, "; ")
+				return summary
+			}
 		}
 	}
 
