@@ -1,0 +1,116 @@
+name: RC Release
+
+on:
+  push:
+    branches:
+      - main
+
+concurrency:
+  group: rc-release-${{ github.ref }}
+  cancel-in-progress: false
+
+env:
+  REGISTRY: ghcr.io
+  IMAGE_NAME: ryanelliottsmith/network-debugger
+
+jobs:
+  build-and-release:
+    name: Build and Release RC
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      packages: write
+    outputs:
+      version: ${{ steps.version.outputs.NEXT_RC_VERSION }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.25'
+
+      - name: Detect next RC version
+        id: version
+        run: |
+          bash .github/scripts/version-detect.sh
+          echo "NEXT_RC_VERSION=${{ steps.version.outputs.NEXT_RC_VERSION }}"
+          echo "NEXT_RC_NUMBER=${{ steps.version.outputs.NEXT_RC_NUMBER }}"
+          echo "LAST_STABLE_VERSION=${{ steps.version.outputs.LAST_STABLE_VERSION }}"
+
+      - name: Check if tag exists
+        run: |
+          if git rev-parse "${{ steps.version.outputs.NEXT_RC_VERSION }}" >/dev/null 2>&1; then
+            echo "Error: Tag ${{ steps.version.outputs.NEXT_RC_VERSION }} already exists"
+            exit 1
+          fi
+
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v3
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log in to GitHub Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build and push Docker image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          platforms: linux/amd64,linux/arm64
+          push: true
+          tags: |
+            ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ steps.version.outputs.NEXT_RC_VERSION }}
+            ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:dev
+          build-args: |
+            VERSION=${{ steps.version.outputs.NEXT_RC_VERSION }}
+            COMMIT=${{ github.sha }}
+            BUILD_DATE=${{ github.event.repository.updated_at }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: Build binaries
+        run: |
+          VERSION="${{ steps.version.outputs.NEXT_RC_VERSION }}"
+          COMMIT="${{ github.sha }}"
+          BUILD_DATE="$(date -u +%Y-%m-%d)"
+          
+          GOOS=linux GOARCH=amd64 go build \
+            -ldflags "-X main.Version=$VERSION -X main.Commit=$COMMIT -X main.BuildDate=$BUILD_DATE" \
+            -o netdebug-linux-amd64 ./cmd/netdebug
+          
+          GOOS=linux GOARCH=arm64 go build \
+            -ldflags "-X main.Version=$VERSION -X main.Commit=$COMMIT -X main.BuildDate=$BUILD_DATE" \
+            -o netdebug-linux-arm64 ./cmd/netdebug
+          
+          GOOS=darwin GOARCH=arm64 go build \
+            -ldflags "-X main.Version=$VERSION -X main.Commit=$COMMIT -X main.BuildDate=$BUILD_DATE" \
+            -o netdebug-darwin-arm64 ./cmd/netdebug
+          
+          GOOS=windows GOARCH=amd64 go build \
+            -ldflags "-X main.Version=$VERSION -X main.Commit=$COMMIT -X main.BuildDate=$BUILD_DATE" \
+            -o netdebug-windows-amd64.exe ./cmd/netdebug
+
+      - name: Create RC Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ steps.version.outputs.NEXT_RC_VERSION }}
+          name: ${{ steps.version.outputs.NEXT_RC_VERSION }} (Release Candidate)
+          prerelease: true
+          body: |
+            RC build from commit: ${{ github.sha }}
+            
+            ${{ github.event.head_commit.message }}
+          files: |
+            netdebug-linux-amd64
+            netdebug-linux-arm64
+            netdebug-darwin-arm64
+            netdebug-windows-amd64.exe

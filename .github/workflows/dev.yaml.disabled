@@ -1,4 +1,14 @@
-name: Dev Build
+# DEPRECATED: This workflow has been replaced by rc-release.yaml
+# 
+# This workflow created dev-{sha} tags and a floating :dev tag on every push to main.
+# It has been replaced by the semantic versioning RC workflow which creates:
+# - v{major}.{minor}.{patch+1}-rc.{N} tags for each commit
+# - A floating :dev tag that points to the latest RC
+#
+# Old dev-{sha} tags and releases are preserved for backward compatibility.
+# See: .github/workflows/rc-release.yaml
+#
+# name: Dev Build
 
 on:
   push:
