@@ -6,20 +6,24 @@ import (
 	"fmt"
 	"log"
 	"os/exec"
+	"strconv"
+	"strings"
 
 	"github.com/ryanelliottsmith/network-debugger/pkg/types"
 )
 
 const BandwidthDuration = 10
 
-type BandwidthCheck struct{}
+type BandwidthCheck struct {
+	iperfArgs string
+}
 
 func (c *BandwidthCheck) Name() string {
 	return "bandwidth"
 }
 
 func (c *BandwidthCheck) Description() string {
-	return "Tests network bandwidth between nodes using iperf. Results display throughput speed and TCP retransmit counts."
+	return "Tests network bandwidth between nodes using iperf. Results display throughput speed, TCP retransmit counts, and test duration."
 }
 
 func (c *BandwidthCheck) Run(ctx context.Context, target string) (*types.TestResult, error) {
@@ -37,15 +41,30 @@ func (c *BandwidthCheck) Run(ctx context.Context, target string) (*types.TestRes
 		return result, nil
 	}
 
-	log.Printf("[bandwidth] Result: %.2f Mbps, %d retransmits", details.BandwidthMbps, details.Retransmits)
+	log.Printf("[bandwidth] Result: SPEED: %.2f Mbps, RETRANSMITS: %d, RUNTIME: %ds", details.BandwidthMbps, details.Retransmits, details.Duration)
 	result.Details = make(map[string]interface{})
 	result.Details["bandwidth"] = details
 	return result, nil
 }
 
 func (c *BandwidthCheck) runIperf3(ctx context.Context, target string) (types.BandwidthCheckDetails, error) {
-	log.Printf("[bandwidth] Starting iperf3 test to %s for %d seconds", target, BandwidthDuration)
-	cmd := exec.CommandContext(ctx, "iperf3", "-c", target, "-J", "-t", fmt.Sprintf("%d", BandwidthDuration))
+	duration := BandwidthDuration
+	args := []string{"-c", target, "-J"}
+	if c.iperfArgs != "" {
+		args = append(args, strings.Fields(c.iperfArgs)...)
+		fields := strings.Fields(c.iperfArgs)
+		for i, arg := range fields {
+			if arg == "-t" && i+1 < len(fields) {
+				if t, err := strconv.Atoi(fields[i+1]); err == nil {
+					duration = t
+				}
+			}
+		}
+	} else {
+		args = append(args, "-t", fmt.Sprintf("%d", BandwidthDuration))
+	}
+	log.Printf("[bandwidth] Starting iperf3 test to %s for %d seconds", target, duration)
+	cmd := exec.CommandContext(ctx, "iperf3", args...)
 	output, err := cmd.CombinedOutput()
 
 	log.Printf("[bandwidth] iperf3 output length: %d bytes", len(output))
@@ -68,9 +87,21 @@ func (c *BandwidthCheck) runIperf3(ctx context.Context, target string) (types.Ba
 }
 
 func (c *BandwidthCheck) parseIperf3Output(output []byte) (types.BandwidthCheckDetails, error) {
+	duration := BandwidthDuration
+	if c.iperfArgs != "" {
+		args := strings.Fields(c.iperfArgs)
+		for i, arg := range args {
+			if arg == "-t" && i+1 < len(args) {
+				if t, err := strconv.Atoi(args[i+1]); err == nil {
+					duration = t
+				}
+			}
+		}
+	}
+
 	details := types.BandwidthCheckDetails{
 		Protocol: "tcp",
-		Duration: BandwidthDuration,
+		Duration: duration,
 	}
 
 	var iperf3Result struct {
@@ -140,17 +171,23 @@ func formatBandwidthMap(m map[string]interface{}) string {
 		return ""
 	}
 	retransmits, _ := m["retransmits"].(float64) // JSON numbers are float64
+	duration, _ := m["duration_seconds"].(float64)
 
-	if mbps >= 1000 {
-		return fmt.Sprintf("%.2f Gbps, %d retransmits", mbps/1000, int(retransmits))
+	durationStr := ""
+	if duration > 0 {
+		durationStr = fmt.Sprintf(", RUNTIME: %ds", int(duration))
 	}
-	return fmt.Sprintf("%.2f Mbps, %d retransmits", mbps, int(retransmits))
+
+	// if mbps >= 1000 {
+	// 	return fmt.Sprintf("SPEED: %.2f Gbps, RETRANSMITS: %d%s", mbps/1000, int(retransmits), durationStr)
+	// }
+	return fmt.Sprintf("SPEED: %.2f Mbps, RETRANSMITS: %d%s", mbps, int(retransmits), durationStr)
 }
 
-func NewBandwidthCheck() *BandwidthCheck {
-	return &BandwidthCheck{}
+func NewBandwidthCheck(args string) *BandwidthCheck {
+	return &BandwidthCheck{iperfArgs: args}
 }
 
 func init() {
-	DefaultRegistry.Register(NewBandwidthCheck())
+	DefaultRegistry.Register(NewBandwidthCheck(""))
 }

@@ -32,6 +32,7 @@ func init() {
 	runCmd.Flags().Duration("timeout", 5*time.Minute, "Overall timeout (0 = no timeout)")
 	runCmd.Flags().Bool("cleanup", true, "Remove DaemonSet after test completion")
 	runCmd.Flags().StringP("output", "o", "table", "Output format (table, json, yaml)")
+	runCmd.Flags().String("iperf-args", "", "Custom arguments to pass to iperf3 during bandwidth checks (e.g. \"-R -t 30\")")
 }
 
 func runTests(cmd *cobra.Command, args []string) error {
@@ -44,6 +45,7 @@ func runTests(cmd *cobra.Command, args []string) error {
 	timeout, _ := cmd.Flags().GetDuration("timeout")
 	cleanup, _ := cmd.Flags().GetBool("cleanup")
 	outputFormat, _ := cmd.Flags().GetString("output")
+	iperfArgs, _ := cmd.Flags().GetString("iperf-args")
 	debug, _ := cmd.Flags().GetBool("debug")
 
 	if !hostNetwork && !overlay {
@@ -160,7 +162,7 @@ func runTests(cmd *cobra.Command, args []string) error {
 
 		if hostNetwork {
 			fmt.Println("\n--- Host Network Bandwidth ---")
-			events, err := runBandwidthTests(ctx, coord, hostTargets, hostPods, timeout, debug)
+			events, err := runBandwidthTests(ctx, coord, hostTargets, hostPods, timeout, debug, iperfArgs)
 			if err != nil {
 				fmt.Printf("Warning: host bandwidth tests failed: %v\n", err)
 			}
@@ -169,7 +171,7 @@ func runTests(cmd *cobra.Command, args []string) error {
 
 		if overlay {
 			fmt.Println("\n--- Overlay Network Bandwidth ---")
-			events, err := runBandwidthTests(ctx, coord, overlayTargets, overlayPods, timeout, debug)
+			events, err := runBandwidthTests(ctx, coord, overlayTargets, overlayPods, timeout, debug, iperfArgs)
 			if err != nil {
 				fmt.Printf("Warning: overlay bandwidth tests failed: %v\n", err)
 			}
@@ -231,7 +233,7 @@ func runStandardTests(ctx context.Context, coord *coordinator.Coordinator, targe
 	return events, nil
 }
 
-func runBandwidthTests(ctx context.Context, coord *coordinator.Coordinator, targets []types.TargetNode, pods []types.TargetNode, timeout time.Duration, debug bool) ([]*types.Event, error) {
+func runBandwidthTests(ctx context.Context, coord *coordinator.Coordinator, targets []types.TargetNode, pods []types.TargetNode, timeout time.Duration, debug bool, iperfArgs string) ([]*types.Event, error) {
 	pairs := coordinator.GenerateBandwidthPairs(targets)
 
 	fmt.Printf("Running %d bandwidth tests (sequential)...\n", len(pairs))
@@ -259,6 +261,7 @@ func runBandwidthTests(ctx context.Context, coord *coordinator.Coordinator, targ
 				SourcePod:  source.PodName,
 				TargetNode: target.NodeName,
 				TargetIP:   target.IP,
+				IperfArgs:  iperfArgs,
 			},
 			Timeout: 5,
 			Debug:   debug,

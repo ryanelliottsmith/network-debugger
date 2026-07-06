@@ -19,7 +19,7 @@ func SetVersionInfo(v, c, b string) {
 	buildDate = b
 }
 
-var rootCmd = &cobra.Command{
+var RootCmd = &cobra.Command{
 	Use:   "netdebug",
 	Short: "Network debugger for Kubernetes clusters",
 	Long: `A comprehensive network debugging tool for Kubernetes clusters (RKE2/K3s).
@@ -27,18 +27,18 @@ Helps diagnose connectivity issues, DNS problems, port accessibility, and more.`
 }
 
 func Execute() error {
-	return rootCmd.Execute()
+	return RootCmd.Execute()
 }
 
 func init() {
-	rootCmd.AddCommand(versionCmd)
-	rootCmd.AddCommand(runCmd)
-	rootCmd.AddCommand(checkCmd)
-	rootCmd.AddCommand(agentCmd)
-	rootCmd.AddCommand(deployCmd)
+	RootCmd.AddCommand(versionCmd)
+	RootCmd.AddCommand(runCmd)
+	RootCmd.AddCommand(checkCmd)
+	RootCmd.AddCommand(agentCmd)
+	RootCmd.AddCommand(deployCmd)
 
-	rootCmd.PersistentFlags().StringP("output", "o", "table", "Output format (table, json, yaml)")
-	rootCmd.PersistentFlags().Bool("debug", false, "Enable debug output")
+	RootCmd.PersistentFlags().StringP("output", "o", "table", "Output format (table, json, yaml)")
+	RootCmd.PersistentFlags().Bool("debug", false, "Enable debug output")
 }
 
 func exitWithError(msg string, args ...interface{}) {

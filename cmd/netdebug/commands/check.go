@@ -2,6 +2,7 @@ package commands
 
 import (
 	"fmt"
+	"strconv"
 	"strings"
 	"time"
 
@@ -86,13 +87,26 @@ var checkBandwidthCmd = &cobra.Command{
 	Short: "Test network bandwidth",
 	RunE: func(cmd *cobra.Command, args []string) error {
 		target, _ := cmd.Flags().GetString("target")
+		iperfArgs, _ := cmd.Flags().GetString("iperf-args")
 
 		if target == "" {
 			return fmt.Errorf("target required (use --target)")
 		}
 
-		check := checks.NewBandwidthCheck()
-		result := checks.RunWithTimeout(check, target, time.Duration(checks.BandwidthDuration+5)*time.Second)
+		timeoutSecs := checks.BandwidthDuration + 5
+		if iperfArgs != "" {
+			args := strings.Fields(iperfArgs)
+			for i, arg := range args {
+				if arg == "-t" && i+1 < len(args) {
+					if t, err := strconv.Atoi(args[i+1]); err == nil {
+						timeoutSecs = t + 5
+					}
+				}
+			}
+		}
+
+		check := checks.NewBandwidthCheck(iperfArgs)
+		result := checks.RunWithTimeout(check, target, time.Duration(timeoutSecs)*time.Second)
 
 		format, _ := cmd.Flags().GetString("output")
 		return output.PrintResult(result, format)
@@ -152,4 +166,5 @@ func init() {
 	checkPortsCmd.Flags().StringSlice("ports", []string{}, "Ports to check (format: 8080/tcp:name)")
 
 	checkBandwidthCmd.Flags().String("target", "", "Target host for bandwidth test")
+	checkBandwidthCmd.Flags().String("iperf-args", "", "Custom arguments to pass to iperf3 (e.g. \"-R -t 30\")")
 }

@@ -3,6 +3,8 @@ package agent
 import (
 	"context"
 	"log"
+	"strconv"
+	"strings"
 	"sync"
 	"time"
 
@@ -141,8 +143,20 @@ func runBandwidthTest(ctx context.Context, test *types.BandwidthTest, self *Self
 		log.Printf("Failed to emit test start: %v", err)
 	}
 
-	check := checks.NewBandwidthCheck()
-	result := checks.RunWithTimeout(check, test.TargetIP, time.Duration(checks.BandwidthDuration+5)*time.Second)
+	timeoutSecs := checks.BandwidthDuration + 5
+	if test.IperfArgs != "" {
+		args := strings.Fields(test.IperfArgs)
+		for i, arg := range args {
+			if arg == "-t" && i+1 < len(args) {
+				if t, err := strconv.Atoi(args[i+1]); err == nil {
+					timeoutSecs = t + 5
+				}
+			}
+		}
+	}
+
+	check := checks.NewBandwidthCheck(test.IperfArgs)
+	result := checks.RunWithTimeout(check, test.TargetIP, time.Duration(timeoutSecs)*time.Second)
 	result.Node = self.NodeName
 	result.Target = test.TargetNode
 

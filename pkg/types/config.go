@@ -23,6 +23,7 @@ type BandwidthTest struct {
 	SourcePod  string `json:"source_pod"`
 	TargetNode string `json:"target_node"`
 	TargetIP   string `json:"target_ip"`
+	IperfArgs  string `json:"iperf_args,omitempty"`
 }
 
 type Config struct {
