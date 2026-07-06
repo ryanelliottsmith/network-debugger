@@ -16,7 +16,7 @@ ARG VERSION=dev
 ARG COMMIT=unknown
 ARG BUILD_DATE=unknown
 RUN CGO_ENABLED=0 GOOS=${TARGETOS} GOARCH=${TARGETARCH} go build \
-    -ldflags="-w -s -X main.version=${VERSION} -X main.commit=${COMMIT} -X main.buildDate=${BUILD_DATE}" \
+    -ldflags="-w -s -X main.Version=${VERSION} -X main.Commit=${COMMIT} -X main.BuildDate=${BUILD_DATE}" \
     -o netdebug \
     ./cmd/netdebug
 

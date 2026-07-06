@@ -3,7 +3,7 @@ VERSION ?= dev
 COMMIT ?= $(shell git rev-parse --short HEAD 2>/dev/null || echo "unknown")
 BUILD_DATE ?= $(shell date -u +"%Y-%m-%dT%H:%M:%SZ")
 
-LDFLAGS := -ldflags "-X main.version=$(VERSION) -X main.commit=$(COMMIT) -X main.buildDate=$(BUILD_DATE)"
+LDFLAGS := -ldflags "-X main.Version=$(VERSION) -X main.Commit=$(COMMIT) -X main.BuildDate=$(BUILD_DATE)"
 
 BINARY := netdebug
 

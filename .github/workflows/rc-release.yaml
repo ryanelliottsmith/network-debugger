@@ -37,9 +37,7 @@ jobs:
         id: version
         run: |
           bash .github/scripts/version-detect.sh
-          echo "NEXT_RC_VERSION=${{ steps.version.outputs.NEXT_RC_VERSION }}"
-          echo "NEXT_RC_NUMBER=${{ steps.version.outputs.NEXT_RC_NUMBER }}"
-          echo "LAST_STABLE_VERSION=${{ steps.version.outputs.LAST_STABLE_VERSION }}"
+          cat "$GITHUB_OUTPUT"
 
       - name: Check if tag exists
         run: |
