@@ -39,7 +39,7 @@ type Check interface {
 
 	// FormatSummary formats the details for display in table output.
 	// Returns a human-readable summary string suitable for the Details column.
-	FormatSummary(details interface{}, debug bool) string
+	FormatSummary(details interface{}, quiet bool) string
 }
 
 func RunWithTimeout(check Check, target string, timeout time.Duration) *types.TestResult {

@@ -134,7 +134,7 @@ func (c *ConntrackCheck) AlwaysShow() bool {
 	return false
 }
 
-func (c *ConntrackCheck) FormatSummary(details interface{}, debug bool) string {
+func (c *ConntrackCheck) FormatSummary(details interface{}, quiet bool) string {
 	if details == nil {
 		return ""
 	}

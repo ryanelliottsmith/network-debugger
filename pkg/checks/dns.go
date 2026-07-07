@@ -82,7 +82,7 @@ func (c *DNSCheck) resolveWithTiming(ctx context.Context, name string) (types.DN
 }
 
 func (c *DNSCheck) IsLocal() bool {
-	return false
+	return true
 }
 
 func (c *DNSCheck) HostNetworkOnly() bool {
@@ -93,7 +93,7 @@ func (c *DNSCheck) AlwaysShow() bool {
 	return false
 }
 
-func (c *DNSCheck) FormatSummary(details interface{}, debug bool) string {
+func (c *DNSCheck) FormatSummary(details interface{}, quiet bool) string {
 	if details == nil {
 		return ""
 	}
@@ -138,7 +138,7 @@ func (c *DNSCheck) FormatSummary(details interface{}, debug bool) string {
 			}
 		}
 
-		if debug && query != "" {
+		if !quiet && query != "" {
 			if resolvedIPsRaw != nil {
 				if resolvedIPs, ok := resolvedIPsRaw.([]interface{}); ok && len(resolvedIPs) > 0 {
 					var ips []string
@@ -156,7 +156,7 @@ func (c *DNSCheck) FormatSummary(details interface{}, debug bool) string {
 	}
 
 	summary := fmt.Sprintf("%d/%d lookups OK", successCount, len(lookups))
-	if debug && len(lookupDetails) > 0 {
+	if !quiet && len(lookupDetails) > 0 {
 		return summary + " | " + strings.Join(lookupDetails, ", ")
 	}
 	return summary

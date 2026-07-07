@@ -144,7 +144,7 @@ func (c *BandwidthCheck) AlwaysShow() bool {
 	return true
 }
 
-func (c *BandwidthCheck) FormatSummary(details interface{}, debug bool) string {
+func (c *BandwidthCheck) FormatSummary(details interface{}, quiet bool) string {
 	if details == nil {
 		return ""
 	}

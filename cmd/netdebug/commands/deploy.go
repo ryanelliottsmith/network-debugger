@@ -41,20 +41,20 @@ var deployInstallCmd = &cobra.Command{
 			return fmt.Errorf("failed to install: %w", err)
 		}
 
-		fmt.Println("✓ Resources deployed successfully")
+		fmt.Println("Resources deployed successfully")
 
 		fmt.Println("\nWaiting for DaemonSets to be ready...")
 
 		if err := k8s.WaitForDaemonSetReady(ctx, clientset, namespace, "netdebug-host", 2*time.Minute); err != nil {
 			fmt.Printf("Warning: Host DaemonSet not ready: %v\n", err)
 		} else {
-			fmt.Println("✓ Host network DaemonSet ready")
+			fmt.Println("Host network DaemonSet ready")
 		}
 
 		if err := k8s.WaitForDaemonSetReady(ctx, clientset, namespace, "netdebug-overlay", 2*time.Minute); err != nil {
 			fmt.Printf("Warning: Overlay DaemonSet not ready: %v\n", err)
 		} else {
-			fmt.Println("✓ Overlay network DaemonSet ready")
+			fmt.Println("Overlay network DaemonSet ready")
 		}
 
 		fmt.Printf("\nInstallation complete! Use 'netdebug run' to start testing.\n")
@@ -82,7 +82,7 @@ var deployUninstallCmd = &cobra.Command{
 			return fmt.Errorf("failed to uninstall: %w", err)
 		}
 
-		fmt.Println("✓ Resources removed successfully")
+		fmt.Println("Resources removed successfully")
 
 		return nil
 	},

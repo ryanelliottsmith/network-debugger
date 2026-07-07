@@ -6,6 +6,7 @@ import (
 	"os"
 	"sort"
 	"strings"
+	"text/tabwriter"
 
 	"github.com/ryanelliottsmith/network-debugger/pkg/checks"
 	"github.com/ryanelliottsmith/network-debugger/pkg/types"
@@ -51,20 +52,20 @@ func printYAML(v interface{}) error {
 }
 
 func printTable(result *types.TestResult) error {
-	status := "✓"
+	status := "PASS"
 	if result.Status == types.StatusFail {
-		status = "✗"
+		status = "FAIL"
 	} else if result.Status == types.StatusIncomplete {
-		status = "?"
+		status = "UNKNOWN"
 	}
 
-	fmt.Printf("Check:    %s\n", result.Check)
-	fmt.Printf("Target:   %s\n", result.Target)
-	fmt.Printf("Status:   %s %s\n", status, result.Status)
-	fmt.Printf("Duration: %v\n", result.Duration)
+	w := tabwriter.NewWriter(os.Stdout, 0, 0, 3, ' ', 0)
+	fmt.Fprintf(w, "CHECK\tTARGET\tSTATUS\tDURATION\n")
+	fmt.Fprintf(w, "%s\t%s\t%s\t%v\n", result.Check, result.Target, status, result.Duration)
+	w.Flush()
 
 	if result.Error != "" {
-		fmt.Printf("Error:    %s\n", result.Error)
+		fmt.Printf("\nError: %s\n", result.Error)
 	}
 
 	if len(result.Details) > 0 {
@@ -77,76 +78,53 @@ func printTable(result *types.TestResult) error {
 }
 
 func printTableSummary(summary *types.TestSummary) error {
-	fmt.Printf("Test Summary\n")
+	fmt.Printf("TEST SUMMARY\n")
 	fmt.Printf("============\n\n")
-	fmt.Printf("Total:      %d\n", summary.TotalTests)
-	fmt.Printf("Passed:     %d\n", summary.Passed)
-	fmt.Printf("Failed:     %d\n", summary.Failed)
-	fmt.Printf("Incomplete: %d\n", summary.Incomplete)
-	fmt.Printf("Duration:   %v\n\n", summary.Duration)
+
+	w1 := tabwriter.NewWriter(os.Stdout, 0, 0, 3, ' ', 0)
+	fmt.Fprintf(w1, "TOTAL\tPASSED\tFAILED\tINCOMPLETE\tDURATION\n")
+	fmt.Fprintf(w1, "%d\t%d\t%d\t%d\t%v\n\n", summary.TotalTests, summary.Passed, summary.Failed, summary.Incomplete, summary.Duration)
+	w1.Flush()
 
 	if len(summary.Results) > 0 {
-		fmt.Println("Results:")
-		fmt.Println("--------")
+		fmt.Println("RESULTS")
+		fmt.Println("-------")
+		w2 := tabwriter.NewWriter(os.Stdout, 0, 0, 3, ' ', 0)
+		fmt.Fprintf(w2, "NODE\tTARGET\tCHECK\tSTATUS\tERROR\n")
 		for _, result := range summary.Results {
-			status := "✓"
+			status := "PASS"
 			if result.Status == types.StatusFail {
-				status = "✗"
+				status = "FAIL"
 			} else if result.Status == types.StatusIncomplete {
-				status = "?"
+				status = "UNKNOWN"
 			}
 
-			fmt.Printf("[%s] %s -> %s (%s)\n", status, result.Node, result.Target, result.Check)
-			if result.Error != "" {
-				fmt.Printf("    Error: %s\n", result.Error)
+			errStr := result.Error
+			if errStr == "" {
+				errStr = "-"
 			}
+			fmt.Fprintf(w2, "%s\t%s\t%s\t%s\t%s\n", result.Node, result.Target, result.Check, status, errStr)
 		}
+		w2.Flush()
 	}
 
 	return nil
 }
 
-func FormatEvents(events []*types.Event, format string, debug bool) error {
+func FormatEvents(events []*types.Event, format string, quiet bool) error {
 	switch format {
 	case "json":
 		return printJSON(events)
 	case "yaml":
 		return printYAML(events)
 	case "table":
-		return printEventsTable(events, debug)
+		return printEventsTable(events, quiet)
 	default:
 		return fmt.Errorf("unknown format: %s", format)
 	}
 }
 
-// calculateColumnWidths scans a set of events and returns the minimum column
-// widths needed to display all Node and Target values without truncation.
-// Each returned width is at least minWidth characters so short names don't look cramped.
-func calculateColumnWidths(events []*types.Event, isLocal bool) (nodeWidth, targetWidth int) {
-	const minWidth = 6
-	nodeWidth = minWidth
-	targetWidth = minWidth
-
-	// Header labels set a floor as well
-	if len("Node") > nodeWidth {
-		nodeWidth = len("Node")
-	}
-	if !isLocal && len("Target") > targetWidth {
-		targetWidth = len("Target")
-	}
-
-	for _, event := range events {
-		if len(event.Node) > nodeWidth {
-			nodeWidth = len(event.Node)
-		}
-		if !isLocal && len(event.Target) > targetWidth {
-			targetWidth = len(event.Target)
-		}
-	}
-	return nodeWidth, targetWidth
-}
-
-func printEventsTable(events []*types.Event, debug bool) error {
+func printEventsTable(events []*types.Event, quiet bool) error {
 	if len(events) == 0 {
 		fmt.Println("No test results collected.")
 		return nil
@@ -173,8 +151,8 @@ func printEventsTable(events []*types.Event, debug bool) error {
 			check := checks.DefaultRegistry.Get(event.Check)
 			alwaysShow := check != nil && check.AlwaysShow()
 
-			// Only include in display if failed OR debug mode OR check says always show
-			if event.Status == "fail" || debug || alwaysShow {
+			// Only include in display if failed OR not quiet OR check says always show
+			if event.Status == "fail" || !quiet || alwaysShow {
 				eventsByCheck[event.Check] = append(eventsByCheck[event.Check], event)
 			}
 		} else if event.Type == types.EventTypeError {
@@ -201,9 +179,6 @@ func printEventsTable(events []*types.Event, debug bool) error {
 			})
 		}
 
-		// Calculate dynamic column widths from actual data
-		nodeWidth, targetWidth := calculateColumnWidths(checkEvents, isLocal)
-
 		// Print check header
 		fmt.Printf("\n%s\n", strings.ToUpper(check))
 		if checkInstance != nil {
@@ -211,19 +186,18 @@ func printEventsTable(events []*types.Event, debug bool) error {
 				fmt.Printf("%s\n", desc)
 			}
 		}
+		w := tabwriter.NewWriter(os.Stdout, 0, 0, 3, ' ', 0)
 		if isLocal {
-			// separator: nodeWidth + 3 + statusWidth(10) + 3 + len("Details")
-			fmt.Println(strings.Repeat("-", nodeWidth+3+10+3+len("Details")))
-			fmt.Printf("%-*s   %-10s   %s\n", nodeWidth, "Node", "Status", "Details")
+			fmt.Fprintf(w, "NODE\tSTATUS\tDETAILS\n")
 			for _, event := range checkEvents {
-				status := "✓ PASS"
+				status := "PASS"
 				if event.Status == "fail" {
-					status = "✗ FAIL"
+					status = "FAIL"
 				}
 
 				details := ""
 				if checkInstance != nil {
-					details = checkInstance.FormatSummary(event.Details, debug)
+					details = checkInstance.FormatSummary(event.Details, quiet)
 				}
 				if event.Error != "" {
 					if details != "" {
@@ -232,22 +206,23 @@ func printEventsTable(events []*types.Event, debug bool) error {
 						details = event.Error
 					}
 				}
+				if details == "" {
+					details = "-"
+				}
 
-				fmt.Printf("%-*s   %-10s   %s\n", nodeWidth, event.Node, status, details)
+				fmt.Fprintf(w, "%s\t%s\t%s\n", event.Node, status, details)
 			}
 		} else {
-			// separator: nodeWidth + 3 + targetWidth + 3 + statusWidth(10) + 3 + len("Details")
-			fmt.Println(strings.Repeat("-", nodeWidth+3+targetWidth+3+10+3+len("Details")))
-			fmt.Printf("%-*s   %-*s   %-10s   %s\n", nodeWidth, "Node", targetWidth, "Target", "Status", "Details")
+			fmt.Fprintf(w, "NODE\tTARGET\tSTATUS\tDETAILS\n")
 			for _, event := range checkEvents {
-				status := "✓ PASS"
+				status := "PASS"
 				if event.Status == "fail" {
-					status = "✗ FAIL"
+					status = "FAIL"
 				}
 
 				details := ""
 				if checkInstance != nil {
-					details = checkInstance.FormatSummary(event.Details, debug)
+					details = checkInstance.FormatSummary(event.Details, quiet)
 				}
 
 				if event.Error != "" {
@@ -257,10 +232,14 @@ func printEventsTable(events []*types.Event, debug bool) error {
 						details = event.Error
 					}
 				}
+				if details == "" {
+					details = "-"
+				}
 
-				fmt.Printf("%-*s   %-*s   %-10s   %s\n", nodeWidth, event.Node, targetWidth, event.Target, status, details)
+				fmt.Fprintf(w, "%s\t%s\t%s\t%s\n", event.Node, event.Target, status, details)
 			}
 		}
+		w.Flush()
 	}
 
 	// Handle any checks not in our predefined order
@@ -276,9 +255,6 @@ func printEventsTable(events []*types.Event, debug bool) error {
 			continue
 		}
 
-		// Fallback checks are never local, so always show Node + Target
-		nodeWidth, targetWidth := calculateColumnWidths(checkEvents, false)
-
 		fmt.Printf("\n%s\n", strings.ToUpper(check))
 		checkInstance := checks.DefaultRegistry.Get(check)
 		if checkInstance != nil {
@@ -286,19 +262,19 @@ func printEventsTable(events []*types.Event, debug bool) error {
 				fmt.Printf("%s\n", desc)
 			}
 		}
-		fmt.Println(strings.Repeat("-", nodeWidth+3+targetWidth+3+10+3+len("Details")))
-		fmt.Printf("%-*s   %-*s   %-10s   %s\n", nodeWidth, "Node", targetWidth, "Target", "Status", "Details")
+
+		w := tabwriter.NewWriter(os.Stdout, 0, 0, 3, ' ', 0)
+		fmt.Fprintf(w, "NODE\tTARGET\tSTATUS\tDETAILS\n")
 
 		for _, event := range checkEvents {
-			status := "✓ PASS"
+			status := "PASS"
 			if event.Status == "fail" {
-				status = "✗ FAIL"
+				status = "FAIL"
 			}
 
 			details := ""
-			checkInstance := checks.DefaultRegistry.Get(check)
 			if checkInstance != nil {
-				details = checkInstance.FormatSummary(event.Details, debug)
+				details = checkInstance.FormatSummary(event.Details, quiet)
 			}
 
 			if event.Error != "" {
@@ -308,13 +284,16 @@ func printEventsTable(events []*types.Event, debug bool) error {
 					details = event.Error
 				}
 			}
+			if details == "" {
+				details = "-"
+			}
 
-			fmt.Printf("%-*s   %-*s   %-10s   %s\n", nodeWidth, event.Node, targetWidth, event.Target, status, details)
+			fmt.Fprintf(w, "%s\t%s\t%s\t%s\n", event.Node, event.Target, status, details)
 		}
+		w.Flush()
 	}
 
 	fmt.Println()
-	fmt.Println(strings.Repeat("=", 60))
 	fmt.Printf("Summary: %d passed, %d failed, %d errors\n", passed, failed, errors)
 
 	return nil

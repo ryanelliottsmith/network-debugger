@@ -158,7 +158,7 @@ func (c *HostConfigCheck) AlwaysShow() bool {
 	return true
 }
 
-func (c *HostConfigCheck) FormatSummary(details interface{}, debug bool) string {
+func (c *HostConfigCheck) FormatSummary(details interface{}, quiet bool) string {
 	hc := extractHostConfig(details)
 	if hc == nil {
 		return ""

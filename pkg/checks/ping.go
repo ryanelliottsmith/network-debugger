@@ -99,7 +99,7 @@ func (c *PingCheck) AlwaysShow() bool {
 	return false
 }
 
-func (c *PingCheck) FormatSummary(details interface{}, debug bool) string {
+func (c *PingCheck) FormatSummary(details interface{}, quiet bool) string {
 	if details == nil {
 		return ""
 	}

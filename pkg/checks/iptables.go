@@ -116,7 +116,7 @@ func (c *IptablesCheck) AlwaysShow() bool {
 	return false
 }
 
-func (c *IptablesCheck) FormatSummary(details interface{}, debug bool) string {
+func (c *IptablesCheck) FormatSummary(details interface{}, quiet bool) string {
 	if details == nil {
 		return ""
 	}
@@ -156,7 +156,7 @@ func (c *IptablesCheck) FormatSummary(details interface{}, debug bool) string {
 		}
 	}
 
-	if debug {
+	if !quiet {
 		return summary
 	}
 

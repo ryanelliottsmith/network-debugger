@@ -124,7 +124,7 @@ func (c *PortsCheck) AlwaysShow() bool {
 	return false
 }
 
-func (c *PortsCheck) FormatSummary(details interface{}, debug bool) string {
+func (c *PortsCheck) FormatSummary(details interface{}, quiet bool) string {
 	if details == nil {
 		return ""
 	}
@@ -160,12 +160,12 @@ func (c *PortsCheck) FormatSummary(details interface{}, debug bool) string {
 
 		if isOpen {
 			open++
-			if debug {
+			if !quiet {
 				latency, _ := portMap["latency_ms"].(float64)
 				portDetails = append(portDetails, fmt.Sprintf("%d/%s: %.2fms", port, protocol, latency))
 			}
 		} else {
-			if debug {
+			if !quiet {
 				msg := fmt.Sprintf("%d/%s: CLOSED", port, protocol)
 				if errStr, ok := portMap["error"].(string); ok && errStr != "" {
 					msg = fmt.Sprintf("%s (%s)", msg, errStr)
@@ -176,7 +176,7 @@ func (c *PortsCheck) FormatSummary(details interface{}, debug bool) string {
 	}
 
 	summary := fmt.Sprintf("%d/%d open", open, total)
-	if debug && len(portDetails) > 0 {
+	if !quiet && len(portDetails) > 0 {
 		return summary + " | " + strings.Join(portDetails, ", ")
 	}
 	return summary

@@ -36,5 +36,5 @@ type Config struct {
 	DNSNames      []string       `json:"dns_names"`
 	BandwidthTest *BandwidthTest `json:"bandwidth_test,omitempty"`
 	Timeout       int            `json:"timeout_seconds"`
-	Debug         bool           `json:"debug,omitempty"`
+	Quiet         bool           `json:"quiet,omitempty"`
 }

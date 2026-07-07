@@ -46,7 +46,7 @@ func runTests(cmd *cobra.Command, args []string) error {
 	cleanup, _ := cmd.Flags().GetBool("cleanup")
 	outputFormat, _ := cmd.Flags().GetString("output")
 	iperfArgs, _ := cmd.Flags().GetString("iperf-args")
-	debug, _ := cmd.Flags().GetBool("debug")
+	quiet, _ := cmd.Flags().GetBool("quiet")
 
 	if !hostNetwork && !overlay {
 		return fmt.Errorf("at least one network mode must be enabled (use --host-network=false or --overlay=false, not both)")
@@ -86,28 +86,28 @@ func runTests(cmd *cobra.Command, args []string) error {
 		if err := k8s.Install(ctx, clientset, dynamicClient, namespace, ""); err != nil {
 			return fmt.Errorf("failed to deploy: %w", err)
 		}
-		fmt.Println("✅ DaemonSets deployed")
+		fmt.Println("DaemonSets deployed")
 	} else {
-		fmt.Println("✅ DaemonSets already deployed")
+		fmt.Println("DaemonSets already deployed")
 	}
 
-	fmt.Println("\n⏳ Waiting for DaemonSets to be ready...")
+	fmt.Println("\nWaiting for DaemonSets to be ready...")
 	if hostNetwork {
 		if err := k8s.WaitForDaemonSetReady(ctx, clientset, namespace, "netdebug-host", 2*time.Minute); err != nil {
 			return fmt.Errorf("host network DaemonSet not ready: %w", err)
 		}
-		fmt.Println("✅ Host network DaemonSet ready")
+		fmt.Println("Host network DaemonSet ready")
 	}
 	if overlay {
 		if err := k8s.WaitForDaemonSetReady(ctx, clientset, namespace, "netdebug-overlay", 2*time.Minute); err != nil {
 			return fmt.Errorf("overlay network DaemonSet not ready: %w", err)
 		}
-		fmt.Println("✅ Overlay network DaemonSet ready")
+		fmt.Println("Overlay network DaemonSet ready")
 	}
 
 	coord := coordinator.NewCoordinator(clientset, namespace, "netdebug-config")
 
-	fmt.Println("\n🔍 Discovering pods...")
+	fmt.Println("\nDiscovering pods...")
 	var hostPods, overlayPods []types.TargetNode
 	var hostTargets, overlayTargets []types.TargetNode
 
@@ -135,11 +135,11 @@ func runTests(cmd *cobra.Command, args []string) error {
 	allEvents := []*types.Event{}
 
 	if len(checksWithoutBandwidth) > 0 {
-		fmt.Println("\n🧪 Running standard checks...")
+		fmt.Println("\nRunning standard checks...")
 
 		if hostNetwork {
 			fmt.Println("\n--- Host Network Tests ---")
-			events, err := runStandardTests(ctx, coord, hostTargets, hostPods, checksWithoutBandwidth, timeout, debug, types.NetworkTypeHost)
+			events, err := runStandardTests(ctx, coord, hostTargets, hostPods, checksWithoutBandwidth, timeout, quiet, types.NetworkTypeHost)
 			if err != nil {
 				fmt.Printf("Warning: host network tests failed: %v\n", err)
 			}
@@ -149,7 +149,7 @@ func runTests(cmd *cobra.Command, args []string) error {
 		if overlay {
 			fmt.Println("\n--- Overlay Network Tests ---")
 			overlayChecks := filterHostNetworkOnlyChecks(checksWithoutBandwidth)
-			events, err := runStandardTests(ctx, coord, overlayTargets, overlayPods, overlayChecks, timeout, debug, types.NetworkTypeOverlay)
+			events, err := runStandardTests(ctx, coord, overlayTargets, overlayPods, overlayChecks, timeout, quiet, types.NetworkTypeOverlay)
 			if err != nil {
 				fmt.Printf("Warning: overlay network tests failed: %v\n", err)
 			}
@@ -158,11 +158,11 @@ func runTests(cmd *cobra.Command, args []string) error {
 	}
 
 	if bandwidthRequested {
-		fmt.Println("\n📊 Running bandwidth tests...")
+		fmt.Println("\nRunning bandwidth tests...")
 
 		if hostNetwork {
 			fmt.Println("\n--- Host Network Bandwidth ---")
-			events, err := runBandwidthTests(ctx, coord, hostTargets, hostPods, timeout, debug, iperfArgs)
+			events, err := runBandwidthTests(ctx, coord, hostTargets, hostPods, timeout, quiet, iperfArgs)
 			if err != nil {
 				fmt.Printf("Warning: host bandwidth tests failed: %v\n", err)
 			}
@@ -171,7 +171,7 @@ func runTests(cmd *cobra.Command, args []string) error {
 
 		if overlay {
 			fmt.Println("\n--- Overlay Network Bandwidth ---")
-			events, err := runBandwidthTests(ctx, coord, overlayTargets, overlayPods, timeout, debug, iperfArgs)
+			events, err := runBandwidthTests(ctx, coord, overlayTargets, overlayPods, timeout, quiet, iperfArgs)
 			if err != nil {
 				fmt.Printf("Warning: overlay bandwidth tests failed: %v\n", err)
 			}
@@ -180,26 +180,26 @@ func runTests(cmd *cobra.Command, args []string) error {
 	}
 
 	if cleanup {
-		fmt.Println("\n🧹 Cleaning up...")
+		fmt.Println("\nCleaning up...")
 		if err := k8s.Uninstall(ctx, dynamicClient, namespace); err != nil {
 			fmt.Printf("Warning: cleanup failed: %v\n", err)
 		} else {
-			fmt.Println("✅ Resources cleaned up")
+			fmt.Println("Resources cleaned up")
 		}
 	}
 
 	fmt.Println("\n" + strings.Repeat("=", 80))
-	fmt.Println("📊 Test Results")
+	fmt.Println("Test Results")
 	fmt.Println(strings.Repeat("=", 80) + "\n")
 
-	if err := output.FormatEvents(allEvents, outputFormat, debug); err != nil {
+	if err := output.FormatEvents(allEvents, outputFormat, quiet); err != nil {
 		return fmt.Errorf("failed to format output: %w", err)
 	}
 
 	return nil
 }
 
-func runStandardTests(ctx context.Context, coord *coordinator.Coordinator, targets []types.TargetNode, pods []types.TargetNode, checks []string, timeout time.Duration, debug bool, networkType types.NetworkType) ([]*types.Event, error) {
+func runStandardTests(ctx context.Context, coord *coordinator.Coordinator, targets []types.TargetNode, pods []types.TargetNode, checks []string, timeout time.Duration, quiet bool, networkType types.NetworkType) ([]*types.Event, error) {
 	testCtx, cancel := context.WithCancel(ctx)
 	defer cancel()
 
@@ -214,7 +214,7 @@ func runStandardTests(ctx context.Context, coord *coordinator.Coordinator, targe
 		Ports:       types.DefaultPorts(),
 		DNSNames:    checkspkg.DefaultDNSNames,
 		Timeout:     5,
-		Debug:       debug,
+		Quiet:       quiet,
 	}
 
 	podNames := make([]string, len(pods))
@@ -229,11 +229,11 @@ func runStandardTests(ctx context.Context, coord *coordinator.Coordinator, targe
 		return nil, err
 	}
 
-	fmt.Printf("✅ Test run completed (%d events collected)\n", len(events))
+	fmt.Printf("Test run completed (%d events collected)\n", len(events))
 	return events, nil
 }
 
-func runBandwidthTests(ctx context.Context, coord *coordinator.Coordinator, targets []types.TargetNode, pods []types.TargetNode, timeout time.Duration, debug bool, iperfArgs string) ([]*types.Event, error) {
+func runBandwidthTests(ctx context.Context, coord *coordinator.Coordinator, targets []types.TargetNode, pods []types.TargetNode, timeout time.Duration, quiet bool, iperfArgs string) ([]*types.Event, error) {
 	pairs := coordinator.GenerateBandwidthPairs(targets)
 
 	fmt.Printf("Running %d bandwidth tests (sequential)...\n", len(pairs))
@@ -264,7 +264,7 @@ func runBandwidthTests(ctx context.Context, coord *coordinator.Coordinator, targ
 				IperfArgs:  iperfArgs,
 			},
 			Timeout: 5,
-			Debug:   debug,
+			Quiet:   quiet,
 		}
 
 		podNames := []string{source.PodName}
@@ -273,17 +273,17 @@ func runBandwidthTests(ctx context.Context, coord *coordinator.Coordinator, targ
 		cancel()
 
 		if err != nil {
-			fmt.Printf("❌ Failed: %v\n", err)
+			fmt.Printf("Failed: %v\n", err)
 			continue
 		}
 
 		allEvents = append(allEvents, events...)
-		fmt.Println("✅")
+		fmt.Println("Done")
 
 		time.Sleep(2 * time.Second)
 	}
 
-	fmt.Printf("✅ All bandwidth tests completed\n")
+	fmt.Printf("All bandwidth tests completed\n")
 	return allEvents, nil
 }
 
