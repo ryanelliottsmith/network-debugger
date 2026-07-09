@@ -203,5 +203,5 @@ func NewHostConfigCheck() *HostConfigCheck {
 }
 
 func init() {
-	DefaultRegistry.Register(NewHostConfigCheck())
+	types.DefaultRegistry.Register(NewHostConfigCheck())
 }

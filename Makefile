@@ -80,14 +80,11 @@ docker-push-multiarch: docker-buildx-setup
 		.
 
 
-.PHONY: podman-build-push
-podman-build-push:
-	podman build \
+.PHONY: docker-build-push
+docker-build-push:
+	docker buildx build \
 	--platform linux/amd64,linux/arm64 \
-	--manifest=$(IMAGE_NAME):$(IMAGE_TAG) \
-	. && \
-	podman manifest push $(IMAGE_NAME):$(IMAGE_TAG) \
-        && echo $(IMAGE_NAME):$(IMAGE_TAG)
+	. -t $(IMAGE_NAME):$(IMAGE_TAG) --push
 
 .PHONY: all
 all: fmt vet lint test build

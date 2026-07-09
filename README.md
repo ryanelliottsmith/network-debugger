@@ -72,12 +72,6 @@ Check deployment status:
 ./netdebug deploy status
 ```
 
-Execute checks against the running DaemonSets:
-
-```bash
-./netdebug check ping
-```
-
 Remove the DaemonSets and associated RBAC resources:
 
 ```bash

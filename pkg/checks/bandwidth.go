@@ -189,5 +189,5 @@ func NewBandwidthCheck(args string) *BandwidthCheck {
 }
 
 func init() {
-	DefaultRegistry.Register(NewBandwidthCheck(""))
+	types.DefaultRegistry.Register(NewBandwidthCheck(""))
 }

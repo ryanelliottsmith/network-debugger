@@ -192,5 +192,5 @@ func NewPortsCheck(ports []types.PortCheck) *PortsCheck {
 }
 
 func init() {
-	DefaultRegistry.Register(NewPortsCheck(nil))
+	types.DefaultRegistry.Register(NewPortsCheck(nil))
 }

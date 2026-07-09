@@ -180,5 +180,5 @@ func NewConntrackCheck() *ConntrackCheck {
 }
 
 func init() {
-	DefaultRegistry.Register(NewConntrackCheck())
+	types.DefaultRegistry.Register(NewConntrackCheck())
 }

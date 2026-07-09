@@ -8,7 +8,6 @@ import (
 	"strings"
 	"text/tabwriter"
 
-	"github.com/ryanelliottsmith/network-debugger/pkg/checks"
 	"github.com/ryanelliottsmith/network-debugger/pkg/types"
 	"gopkg.in/yaml.v3"
 )
@@ -148,7 +147,7 @@ func printEventsTable(events []*types.Event, quiet bool) error {
 			}
 
 			// Check if this check should always show results
-			check := checks.DefaultRegistry.Get(event.Check)
+			check := types.DefaultRegistry.Get(event.Check)
 			alwaysShow := check != nil && check.AlwaysShow()
 
 			// Only include in display if failed OR not quiet OR check says always show
@@ -169,7 +168,7 @@ func printEventsTable(events []*types.Event, quiet bool) error {
 		}
 
 		// Get check from registry to check if it's local
-		checkInstance := checks.DefaultRegistry.Get(check)
+		checkInstance := types.DefaultRegistry.Get(check)
 		isLocal := checkInstance != nil && checkInstance.IsLocal()
 
 		// Special sorting for bandwidth - sort by source node name
@@ -256,7 +255,7 @@ func printEventsTable(events []*types.Event, quiet bool) error {
 		}
 
 		fmt.Printf("\n%s\n", strings.ToUpper(check))
-		checkInstance := checks.DefaultRegistry.Get(check)
+		checkInstance := types.DefaultRegistry.Get(check)
 		if checkInstance != nil {
 			if desc := checkInstance.Description(); desc != "" {
 				fmt.Printf("%s\n", desc)

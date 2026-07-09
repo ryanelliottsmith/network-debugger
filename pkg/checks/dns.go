@@ -185,5 +185,5 @@ func filterClusterLocalNames(names []string) []string {
 }
 
 func init() {
-	DefaultRegistry.Register(NewDNSCheck(nil, ""))
+	types.DefaultRegistry.Register(NewDNSCheck(nil, ""))
 }

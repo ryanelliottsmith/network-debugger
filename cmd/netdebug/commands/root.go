@@ -1,9 +1,6 @@
 package commands
 
 import (
-	"fmt"
-	"os"
-
 	"github.com/spf13/cobra"
 )
 
@@ -33,15 +30,9 @@ func Execute() error {
 func init() {
 	RootCmd.AddCommand(versionCmd)
 	RootCmd.AddCommand(runCmd)
-	RootCmd.AddCommand(checkCmd)
 	RootCmd.AddCommand(agentCmd)
 	RootCmd.AddCommand(deployCmd)
 
 	RootCmd.PersistentFlags().StringP("output", "o", "table", "Output format (table, json, yaml)")
 	RootCmd.PersistentFlags().BoolP("quiet", "q", false, "Suppress detailed output")
-}
-
-func exitWithError(msg string, args ...interface{}) {
-	fmt.Fprintf(os.Stderr, "Error: "+msg+"\n", args...)
-	os.Exit(1)
 }

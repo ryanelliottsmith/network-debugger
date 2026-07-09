@@ -141,5 +141,5 @@ func NewPingCheck(count int) *PingCheck {
 }
 
 func init() {
-	DefaultRegistry.Register(NewPingCheck(0))
+	types.DefaultRegistry.Register(NewPingCheck(0))
 }

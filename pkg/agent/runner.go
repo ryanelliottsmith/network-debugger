@@ -28,7 +28,7 @@ func RunTests(ctx context.Context, config *types.Config, self *SelfInfo) error {
 		wg.Add(1)
 		go func(checkName string) {
 			defer wg.Done()
-			check := checks.DefaultRegistry.Get(checkName)
+			check := types.DefaultRegistry.Get(checkName)
 			if check != nil && check.IsLocal() {
 				runSingleCheck(ctx, checkName, "localhost", self.NodeName, config, self)
 			} else {
@@ -98,7 +98,7 @@ func runSingleCheck(ctx context.Context, checkName, targetIP, targetNode string,
 		log.Printf("Failed to emit test start: %v", err)
 	}
 
-	var check checks.Check
+	var check types.Check
 
 	switch checkName {
 	case "dns":

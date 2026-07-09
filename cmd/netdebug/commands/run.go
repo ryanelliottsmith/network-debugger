@@ -31,8 +31,8 @@ func init() {
 	runCmd.Flags().StringP("namespace", "n", "default", "Namespace for DaemonSet deployment")
 	runCmd.Flags().Duration("timeout", 5*time.Minute, "Overall timeout (0 = no timeout)")
 	runCmd.Flags().Bool("cleanup", true, "Remove DaemonSet after test completion")
-	runCmd.Flags().StringP("output", "o", "table", "Output format (table, json, yaml)")
 	runCmd.Flags().String("iperf-args", "", "Custom arguments to pass to iperf3 during bandwidth checks (e.g. \"-R -t 30\")")
+	runCmd.Flags().String("image", "", "Override default image (default: "+k8s.DefaultImage+")")
 }
 
 func runTests(cmd *cobra.Command, args []string) error {
@@ -47,6 +47,7 @@ func runTests(cmd *cobra.Command, args []string) error {
 	outputFormat, _ := cmd.Flags().GetString("output")
 	iperfArgs, _ := cmd.Flags().GetString("iperf-args")
 	quiet, _ := cmd.Flags().GetBool("quiet")
+	image, _ := cmd.Flags().GetString("image")
 
 	if !hostNetwork && !overlay {
 		return fmt.Errorf("at least one network mode must be enabled (use --host-network=false or --overlay=false, not both)")
@@ -83,7 +84,7 @@ func runTests(cmd *cobra.Command, args []string) error {
 
 	if needsDeployment {
 		fmt.Println("Deploying DaemonSets...")
-		if err := k8s.Install(ctx, clientset, dynamicClient, namespace, ""); err != nil {
+		if err := k8s.Install(ctx, clientset, dynamicClient, namespace, image); err != nil {
 			return fmt.Errorf("failed to deploy: %w", err)
 		}
 		fmt.Println("DaemonSets deployed")
@@ -290,7 +291,7 @@ func runBandwidthTests(ctx context.Context, coord *coordinator.Coordinator, targ
 func filterHostNetworkOnlyChecks(checks []string) []string {
 	var filtered []string
 	for _, name := range checks {
-		check := checkspkg.DefaultRegistry.Get(name)
+		check := types.DefaultRegistry.Get(name)
 		if check != nil && check.HostNetworkOnly() {
 			continue
 		}

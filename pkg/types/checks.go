@@ -1,43 +1,45 @@
-package checks
+package types
 
 import (
+	"context"
 	"sync"
 )
 
-// DefaultRegistry is the global check registry.
-// All checks should register themselves with this registry.
+type Check interface {
+	Name() string
+	Description() string
+	Run(ctx context.Context, target string) (*TestResult, error)
+	IsLocal() bool
+	HostNetworkOnly() bool
+	AlwaysShow() bool
+	FormatSummary(details interface{}, quiet bool) string
+}
+
 var DefaultRegistry = NewRegistry()
 
-// Registry maintains a mapping of check names to Check instances.
 type Registry struct {
 	mu     sync.RWMutex
 	checks map[string]Check
 }
 
-// NewRegistry creates a new empty registry.
 func NewRegistry() *Registry {
 	return &Registry{
 		checks: make(map[string]Check),
 	}
 }
 
-// Register adds a check to the registry.
-// If a check with the same name is already registered, it will be replaced.
 func (r *Registry) Register(check Check) {
 	r.mu.Lock()
 	defer r.mu.Unlock()
 	r.checks[check.Name()] = check
 }
 
-// Get retrieves a check by name.
-// Returns nil if the check is not registered.
 func (r *Registry) Get(name string) Check {
 	r.mu.RLock()
 	defer r.mu.RUnlock()
 	return r.checks[name]
 }
 
-// Names returns a sorted list of all registered check names.
 func (r *Registry) Names() []string {
 	r.mu.RLock()
 	defer r.mu.RUnlock()
@@ -49,7 +51,6 @@ func (r *Registry) Names() []string {
 	return names
 }
 
-// All returns all registered checks.
 func (r *Registry) All() []Check {
 	r.mu.RLock()
 	defer r.mu.RUnlock()

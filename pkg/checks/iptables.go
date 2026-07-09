@@ -168,5 +168,5 @@ func NewIptablesCheck() *IptablesCheck {
 }
 
 func init() {
-	DefaultRegistry.Register(NewIptablesCheck())
+	types.DefaultRegistry.Register(NewIptablesCheck())
 }

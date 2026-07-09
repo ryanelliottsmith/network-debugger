@@ -16,7 +16,7 @@ import (
 
 const (
 	DefaultImageRepo = "ghcr.io/ryanelliottsmith/network-debugger"
-	DefaultImageTag  = "dev"
+	DefaultImageTag  = "latest"
 	DefaultImage     = DefaultImageRepo + ":" + DefaultImageTag
 )
 
