@@ -17,20 +17,25 @@ jobs:
     name: Build and Push Multi-arch Image
     runs-on: ubuntu-latest
     permissions:
-      contents: read
+      contents: write
       packages: write
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
+
+      - name: Set up Go
+        uses: actions/setup-go@40f1582b2485089dde7abd97c1529aa768e1baff # v5.6.0
+        with:
+          go-version: '1.25'
 
       - name: Set up QEMU
-        uses: docker/setup-qemu-action@v3
+        uses: docker/setup-qemu-action@c7c53464625b32c7a7e944ae62b3e17d2b600130 # v3.7.0
 
       - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
+        uses: docker/setup-buildx-action@f7ce87c1d6bead3e36075b2ce75da1f6cc28aaca # v3.9.0
 
       - name: Log in to GitHub Container Registry
-        uses: docker/login-action@v3
+        uses: docker/login-action@c94ce9fb468520275223c153574b00df6fe4bcc9 # v3.7.0
         with:
           registry: ${{ env.REGISTRY }}
           username: ${{ github.actor }}
@@ -38,7 +43,7 @@ jobs:
 
       - name: Extract metadata
         id: meta
-        uses: docker/metadata-action@v5
+        uses: docker/metadata-action@318604b99e75e41977312d83839a89be02ca4893 # v5.9.0
         with:
           images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
           tags: |
@@ -46,7 +51,7 @@ jobs:
             type=raw,value=latest
 
       - name: Build and push Docker image
-        uses: docker/build-push-action@v6
+        uses: docker/build-push-action@4f58ea79222b3b9dc2c8bbdd6debcef730109a75 # v6.9.0
         with:
           context: .
           platforms: linux/amd64,linux/arm64
@@ -59,3 +64,38 @@ jobs:
             BUILD_DATE=${{ github.event.repository.updated_at }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
+
+      - name: Build binaries
+        run: |
+          VERSION="${{ inputs.version }}"
+          COMMIT="${{ github.sha }}"
+          BUILD_DATE="$(date -u +%Y-%m-%d)"
+          
+          GOOS=linux GOARCH=amd64 go build \
+            -ldflags "-X main.Version=$VERSION -X main.Commit=$COMMIT -X main.BuildDate=$BUILD_DATE" \
+            -o netdebug-linux-amd64 ./cmd/netdebug
+          
+          GOOS=linux GOARCH=arm64 go build \
+            -ldflags "-X main.Version=$VERSION -X main.Commit=$COMMIT -X main.BuildDate=$BUILD_DATE" \
+            -o netdebug-linux-arm64 ./cmd/netdebug
+          
+          GOOS=darwin GOARCH=arm64 go build \
+            -ldflags "-X main.Version=$VERSION -X main.Commit=$COMMIT -X main.BuildDate=$BUILD_DATE" \
+            -o netdebug-darwin-arm64 ./cmd/netdebug
+          
+          GOOS=windows GOARCH=amd64 go build \
+            -ldflags "-X main.Version=$VERSION -X main.Commit=$COMMIT -X main.BuildDate=$BUILD_DATE" \
+            -o netdebug-windows-amd64.exe ./cmd/netdebug
+
+      - name: Create Release
+        uses: softprops/action-gh-release@3bb12739c298aeb8a4eeaf626c5b8d85266b0e65 # v2.6.2
+        with:
+          tag_name: ${{ inputs.version }}
+          name: ${{ inputs.version }}
+          prerelease: false
+          generate_release_notes: true
+          files: |
+            netdebug-linux-amd64
+            netdebug-linux-arm64
+            netdebug-darwin-arm64
+            netdebug-windows-amd64.exe
