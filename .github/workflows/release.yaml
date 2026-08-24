@@ -67,6 +67,7 @@ jobs:
 
       - name: Build binaries
         run: |
+          export CGO_ENABLED=0
           VERSION="${{ inputs.version }}"
           COMMIT="${{ github.sha }}"
           BUILD_DATE="$(date -u +%Y-%m-%d)"
